@@ -280,6 +280,35 @@
 
   </main>
 
+  <!-- MODAL ZOOM DA CARTA (MIGUELZINHO & GAEL) -->
+  <div id="cardZoomModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden" onclick="if(event.target === this) closeCardZoomModal()">
+    <div class="bg-slate-900 rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl border border-slate-700/80 space-y-4 animate-in fade-in zoom-in duration-200 relative overflow-hidden">
+      <!-- Botão Fechar -->
+      <button onclick="closeCardZoomModal()" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-all z-10">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Imagem Gigante com Efeito Holo -->
+      <div class="relative overflow-hidden rounded-2xl bg-slate-950 aspect-[2.5/3.5] max-h-[55vh] flex items-center justify-center border border-slate-800 shadow-2xl mx-auto">
+        <img id="zoomCardImg" src="" alt="Carta Pokémon" class="w-full h-full object-contain transition-transform duration-300 hover:scale-105" loading="lazy">
+        <span id="zoomCardBadge" class="absolute top-3 left-3 bg-poke-red text-white font-black text-xs px-2.5 py-1 rounded-full shadow-lg hidden">Na Coleção</span>
+      </div>
+
+      <!-- Detalhes da Carta -->
+      <div class="space-y-2 text-center sm:text-left">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+          <div>
+            <h3 id="zoomCardName" class="text-xl font-black text-white">Nome da Carta</h3>
+            <p id="zoomCardId" class="text-xs text-slate-400 font-mono">#000</p>
+          </div>
+          <div id="zoomCardActions" class="flex items-center gap-2 mt-2 sm:mt-0 justify-center">
+            <!-- Ações dinâmicas injetadas via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DEDICATÓRIA ESPECIAL MIGUEL & GAEL -->
   <div id="dedicatoriaModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-amber-500/40 text-center space-y-5 animate-in fade-in zoom-in duration-150 relative overflow-hidden">
@@ -404,6 +433,12 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // Fallback de arte com verso oficial Pokémon para cartas sem foto no TCGdex
+    const CARD_BACK_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 245 342' width='245' height='342'%3E%3Crect width='245' height='342' rx='16' fill='%231e293b' stroke='%23334155' stroke-width='4'/%3E%3Crect x='10' y='10' width='225' height='322' rx='12' fill='%230f172a' stroke='%23475569' stroke-dasharray='6 6' stroke-width='2'/%3E%3Ccircle cx='122.5' cy='150' r='55' fill='%23ef4444' stroke='%23020617' stroke-width='6'/%3E%3Cpath d='M67.5 150 A55 55 0 0 0 177.5 150 Z' fill='%23f8fafc' stroke='%23020617' stroke-width='6'/%3E%3Cline x1='67.5' y1='150' x2='177.5' y2='150' stroke='%23020617' stroke-width='8'/%3E%3Ccircle cx='122.5' cy='150' r='18' fill='%23020617'/%3E%3Ccircle cx='122.5' cy='150' r='12' fill='white'/%3E%3Ccircle cx='122.5' cy='150' r='6' fill='%23e2e8f0'/%3E%3Ctext x='122.5' y='250' font-family='sans-serif' font-size='13' font-weight='900' fill='%23e2e8f0' text-anchor='middle' letter-spacing='1'%3EEDIÇÃO ESPECIAL%3C/text%3E%3Ctext x='122.5' y='272' font-family='sans-serif' font-size='10' font-weight='700' fill='%2394a3b8' text-anchor='middle'%3EFoto indisponível no TCG%3C/text%3E%3C/svg%3E";
+
+    // Cache de cartas buscadas para o modal de zoom
+    let currentCatalogCards = [];
+
     // ==========================================
     // BUSCA TCGDEX API (EM PORTUGUÊS BR)
     // ==========================================
@@ -432,32 +467,41 @@
             </div>
           `;
           countEl.innerText = '0 cartas encontradas';
+          currentCatalogCards = [];
           return;
         }
 
+        currentCatalogCards = data.slice(0, 30);
         countEl.innerText = `${data.length} cartas encontradas para "${q}"`;
         let html = '';
 
-        data.slice(0, 25).forEach(card => {
-          const imgUrl = card.image ? `${card.image}/high.webp` : 'https://via.placeholder.com/245x342?text=Sem+Foto';
+        currentCatalogCards.forEach((card, idx) => {
+          const imgUrl = card.image ? `${card.image}/high.webp` : CARD_BACK_FALLBACK;
           const inInv = inventory.find(c => c.id === card.id);
           const qty = inInv ? inInv.quantity : 0;
+          const safeName = (card.name || 'Pokémon').replace(/'/g, "\\'");
 
           html += `
-            <div class="bg-slate-950 rounded-2xl border border-slate-800 p-3 flex flex-col justify-between holo-card group">
-              <div class="relative overflow-hidden rounded-xl bg-slate-900 aspect-[2.5/3.5] mb-2 flex items-center justify-center">
-                <img src="${imgUrl}" alt="${card.name}" class="w-full h-full object-contain" loading="lazy"
-                     onerror="this.src='https://via.placeholder.com/245x342?text=${encodeURIComponent(card.name)}'">
-                ${qty > 0 ? `<span class="absolute top-2 right-2 bg-emerald-500 text-white font-black text-[10px] px-2 py-0.5 rounded-full shadow-md">Tenho ${qty}x</span>` : ''}
+            <div class="bg-slate-950 rounded-2xl border border-slate-800 p-3 flex flex-col justify-between holo-card group transition-all">
+              <div onclick="openCardZoom('catalog', ${idx})" class="relative overflow-hidden rounded-xl bg-slate-900 aspect-[2.5/3.5] mb-2 flex items-center justify-center cursor-pointer group-hover:ring-2 group-hover:ring-poke-red/50 transition-all">
+                <img src="${imgUrl}" alt="${card.name}" class="w-full h-full object-contain pointer-events-none" loading="lazy"
+                     onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
+                ${qty > 0 ? `<span class="absolute top-2 right-2 bg-emerald-500 text-white font-black text-[10px] px-2 py-0.5 rounded-full shadow-md z-10">Tenho ${qty}x</span>` : ''}
+                <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <span class="bg-slate-900/90 text-white font-bold text-[11px] px-2.5 py-1 rounded-full border border-slate-700 flex items-center gap-1 shadow-lg">
+                    <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-poke-red"></i>
+                    <span>Ver Carta</span>
+                  </span>
+                </div>
               </div>
 
-              <div>
-                <h4 class="text-xs font-black text-white truncate">${card.name}</h4>
+              <div onclick="openCardZoom('catalog', ${idx})" class="cursor-pointer">
+                <h4 class="text-xs font-black text-white truncate hover:text-poke-red transition-colors">${card.name}</h4>
                 <p class="text-[10px] text-slate-400">#${card.localId || 'N/A'}</p>
               </div>
 
               <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
-                <button onclick="addToInventory('${card.id}', '${card.name.replace(/'/g, "\\'")}', '${imgUrl}', '${card.localId || ''}')"
+                <button onclick="addToInventory('${card.id}', '${safeName}', '${imgUrl}', '${card.localId || ''}')"
                         class="flex-1 py-1.5 bg-poke-red hover:bg-rose-600 text-white font-bold text-[11px] rounded-lg transition-all flex items-center justify-center gap-1 shadow-sm">
                   <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                   <span>Guardar</span>
@@ -491,7 +535,7 @@
         inventory.push({
           id,
           name,
-          image: imgUrl,
+          image: imgUrl || CARD_BACK_FALLBACK,
           localId,
           quantity: 1,
           forTrade: false,
@@ -521,16 +565,25 @@
       let html = '';
       inventory.forEach((card, idx) => {
         html += `
-          <div class="bg-slate-950 rounded-2xl border ${card.forTrade ? 'border-amber-500/80 bg-amber-950/20' : 'border-slate-800'} p-3 flex flex-col justify-between holo-card">
+          <div class="bg-slate-950 rounded-2xl border ${card.forTrade ? 'border-amber-500/80 bg-amber-950/20' : 'border-slate-800'} p-3 flex flex-col justify-between holo-card group">
             <div>
-              <div class="relative overflow-hidden rounded-xl bg-slate-900 aspect-[2.5/3.5] mb-2 flex items-center justify-center">
-                <img src="${card.image}" class="w-full h-full object-contain" loading="lazy">
-                <span class="absolute top-2 right-2 bg-poke-red text-white font-black text-[10px] px-2 py-0.5 rounded-full shadow-md">${card.quantity}x</span>
-                ${card.forTrade ? '<span class="absolute bottom-2 left-2 bg-amber-500 text-slate-950 font-black text-[9px] px-1.5 py-0.5 rounded-md shadow-md">NA MESA DE TROCA</span>' : ''}
+              <div onclick="openCardZoom('inventory', ${idx})" class="relative overflow-hidden rounded-xl bg-slate-900 aspect-[2.5/3.5] mb-2 flex items-center justify-center cursor-pointer group-hover:ring-2 group-hover:ring-amber-400/50 transition-all">
+                <img src="${card.image}" class="w-full h-full object-contain pointer-events-none" loading="lazy"
+                     onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
+                <span class="absolute top-2 right-2 bg-poke-red text-white font-black text-[10px] px-2 py-0.5 rounded-full shadow-md z-10">${card.quantity}x</span>
+                ${card.forTrade ? '<span class="absolute bottom-2 left-2 bg-amber-500 text-slate-950 font-black text-[9px] px-1.5 py-0.5 rounded-md shadow-md z-10">NA MESA</span>' : ''}
+                <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <span class="bg-slate-900/90 text-white font-bold text-[11px] px-2.5 py-1 rounded-full border border-slate-700 flex items-center gap-1 shadow-lg">
+                    <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>Ampliar</span>
+                  </span>
+                </div>
               </div>
 
-              <h4 class="text-xs font-black text-white truncate">${card.name}</h4>
-              <p class="text-[10px] text-slate-400">Condição: <span class="text-slate-200 font-bold">${card.condition}</span></p>
+              <div onclick="openCardZoom('inventory', ${idx})" class="cursor-pointer">
+                <h4 class="text-xs font-black text-white truncate hover:text-amber-400 transition-colors">${card.name}</h4>
+                <p class="text-[10px] text-slate-400">Condição: <span class="text-slate-200 font-bold">${card.condition}</span></p>
+              </div>
             </div>
 
             <div class="mt-3 pt-2 border-t border-slate-800 space-y-1.5">
@@ -705,6 +758,73 @@
         }, 1200);
       };
       reader.readAsDataURL(file);
+    }
+
+    // ==========================================
+    // MODAL DE ZOOM DA CARTA (MIGUEL & GAEL)
+    // ==========================================
+    function openCardZoom(source, index) {
+      const modal = document.getElementById('cardZoomModal');
+      const imgEl = document.getElementById('zoomCardImg');
+      const nameEl = document.getElementById('zoomCardName');
+      const idEl = document.getElementById('zoomCardId');
+      const badgeEl = document.getElementById('zoomCardBadge');
+      const actionsEl = document.getElementById('zoomCardActions');
+
+      let card = null;
+      let inInv = null;
+      let isFromCatalog = false;
+
+      if (source === 'catalog') {
+        card = currentCatalogCards[index];
+        if (!card) return;
+        isFromCatalog = true;
+        inInv = inventory.find(c => c.id === card.id);
+      } else if (source === 'inventory') {
+        card = inventory[index];
+        if (!card) return;
+        inInv = card;
+      }
+
+      const imgUrl = card.image ? (card.image.includes('http') && !card.image.includes('/high.webp') && !card.image.includes('placeholder') && !card.image.includes('data:image') ? `${card.image}/high.webp` : card.image) : CARD_BACK_FALLBACK;
+      const safeName = (card.name || 'Pokémon').replace(/'/g, "\\'");
+
+      imgEl.src = imgUrl;
+      imgEl.onerror = () => { imgEl.onerror = null; imgEl.src = CARD_BACK_FALLBACK; };
+      nameEl.innerText = card.name || 'Pokémon';
+      idEl.innerText = card.localId ? `Número Coleção: #${card.localId}` : `ID: ${card.id}`;
+
+      if (inInv && inInv.quantity > 0) {
+        badgeEl.innerText = `Você tem ${inInv.quantity}x na pasta`;
+        badgeEl.classList.remove('hidden');
+      } else {
+        badgeEl.classList.add('hidden');
+      }
+
+      if (isFromCatalog) {
+        actionsEl.innerHTML = `
+          <button onclick="addToInventory('${card.id}', '${safeName}', '${imgUrl}', '${card.localId || ''}'); openCardZoom('catalog', ${index});"
+                  class="px-5 py-2.5 bg-poke-red hover:bg-rose-600 text-white font-black text-xs rounded-xl transition-all shadow-lg flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>+1 Guardar na Pasta</span>
+          </button>
+        `;
+      } else {
+        actionsEl.innerHTML = `
+          <button onclick="toggleTradeStatus(${index}); openCardZoom('inventory', ${index});"
+                  class="px-4 py-2.5 ${card.forTrade ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-200 hover:text-white'} font-black text-xs rounded-xl transition-all flex items-center gap-2">
+            <i data-lucide="repeat" class="w-4 h-4"></i>
+            <span>${card.forTrade ? 'Na Mesa de Trocas' : 'Colocar p/ Troca'}</span>
+          </button>
+        `;
+      }
+
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeCardZoomModal() {
+      document.getElementById('cardZoomModal').classList.add('hidden');
     }
 
     // ==========================================
