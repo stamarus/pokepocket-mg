@@ -12,6 +12,7 @@
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -886,47 +887,525 @@
       reader.readAsDataURL(file);
     }
 
-    function processScannedCardImage(imgData) {
+    // ==========================================
+    // BASE DE POKÉMONS & MOTOR DE OCR INTELIGENTE
+    // ==========================================
+    const POKEMON_NAMES_LIST = [
+      "Bulbasaur","Ivysaur","Venusaur","Charmander","Charmeleon","Charizard","Squirtle","Wartortle","Blastoise",
+      "Caterpie","Metapod","Butterfree","Weedle","Kakuna","Beedrill","Pidgey","Pidgeotto","Pidgeot","Rattata","Raticate",
+      "Spearow","Fearow","Ekans","Arbok","Pikachu","Raichu","Sandshrew","Sandslash","Nidoran","Nidorina","Nidoqueen",
+      "Nidorino","Nidoking","Clefairy","Clefable","Vulpix","Ninetales","Jigglypuff","Wigglytuff","Zubat","Golbat",
+      "Oddish","Gloom","Vileplume","Paras","Parasect","Venonat","Venomoth","Diglett","Dugtrio","Meowth","Persian",
+      "Psyduck","Golduck","Mankey","Primeape","Growlithe","Arcanine","Poliwag","Poliwhirl","Poliwrath","Abra","Kadabra",
+      "Alakazam","Machop","Machoke","Machamp","Bellsprout","Weepinbell","Victreebel","Tentacool","Tentacruel","Geodude",
+      "Graveler","Golem","Ponyta","Rapidash","Slowpoke","Slowbro","Magnemite","Magneton","Farfetch'd","Doduo","Dodrio",
+      "Seel","Dewgong","Grimer","Muk","Shellder","Cloyster","Gastly","Haunter","Gengar","Onix","Drowzee","Hypno",
+      "Krabby","Kingler","Voltorb","Electrode","Exeggcute","Exeggutor","Cubone","Marowak","Hitmonlee","Hitmonchan",
+      "Lickitung","Koffing","Weezing","Rhyhorn","Rhydon","Chansey","Tangela","Kangaskhan","Horsea","Seadra","Goldeen",
+      "Seaking","Staryu","Starmie","Mr. Mime","Scyther","Jynx","Electabuzz","Magmar","Pinsir","Tauros","Magikarp",
+      "Gyarados","Lapras","Ditto","Eevee","Vaporeon","Jolteon","Flareon","Porygon","Omanyte","Omastar","Kabuto",
+      "Kabutops","Aerodactyl","Snorlax","Articuno","Zapdos","Moltres","Dratini","Dragonair","Dragonite","Mewtwo","Mew",
+      "Chikorita","Cyndaquil","Totodile","Togepi","Ampharos","Marill","Sudowoodo","Espeon","Umbreon","Wobbuffet",
+      "Steelix","Scizor","Heracross","Sneasel","Teddiursa","Ursaring","Houndour","Houndoom","Kingdra","Donphan",
+      "Porygon2","Smeargle","Tyrogue","Hitmontop","Blissey","Raikou","Entei","Suicune","Larvitar","Pupitar","Tyranitar",
+      "Lugia","Ho-Oh","Celebi","Treecko","Grovyle","Sceptile","Torchic","Combusken","Blaziken","Mudkip","Marshtomp",
+      "Swampert","Ralts","Kirlia","Gardevoir","Gallade","Slakoth","Vigoroth","Slaking","Sableye","Mawile","Aggron",
+      "Meditite","Medicham","Manectric","Flygon","Altaria","Zangoose","Seviper","Milotic","Absol","Salamence","Metagross",
+      "Regirock","Regice","Registeel","Latias","Latios","Kyogre","Groudon","Rayquaza","Jirachi","Deoxys",
+      "Turtwig","Grotle","Torterra","Chimchar","Monferno","Infernape","Piplup","Prinplup","Empoleon","Staraptor",
+      "Luxray","Roserade","Garchomp","Lucario","Hippowdon","Drapion","Toxicroak","Abomasnow","Weavile","Magnezone",
+      "Rhyperior","Electivire","Magmortar","Togekiss","Yanmega","Leafeon","Glaceon","Gliscor","Mamoswine","Porygon-Z",
+      "Dusknoir","Froslass","Rotom","Uxie","Mesprit","Azelf","Dialga","Palkia","Heatran","Regigigas","Giratina",
+      "Cresselia","Phione","Manaphy","Darkrai","Shaymin","Arceus","Victini","Snivy","Servine","Serperior","Tepig",
+      "Pignite","Emboar","Oshawott","Dewott","Samurott","Excadrill","Zoroark","Reuniclus","Chandelure","Haxorus",
+      "Hydreigon","Volcarona","Cobalion","Terrakion","Virizion","Tornadus","Thundurus","Reshiram","Zekrom","Landorus",
+      "Kyurem","Keldeo","Meloetta","Genesect","Chespin","Quilladin","Chesnaught","Fennekin","Braixen","Delphox",
+      "Froakie","Frogadier","Greninja","Talonflame","Aegislash","Sylveon","Hawlucha","Goodra","Trevenant","Noivern",
+      "Xerneas","Yveltal","Zygarde","Diancie","Hoopa","Volcanion","Rowlet","Dartrix","Decidueye","Litten","Torracat",
+      "Incineroar","Popplio","Brionne","Primarina","Lycanroc","Toxapex","Mimikyu","Dhelmise","Kommo-o","Tapu Koko",
+      "Tapu Lele","Tapu Bulu","Tapu Fini","Cosmog","Cosmoem","Solgaleo","Lunala","Nihilego","Buzzwole","Pheromosa",
+      "Xurkitree","Celesteela","Kartana","Guzzlord","Necrozma","Magearna","Marshadow","Poipole","Naganadel","Stakataka",
+      "Blacephalon","Zeraora","Meltan","Melmetal","Grookey","Thwackey","Rillaboom","Scorbunny","Raboot","Cinderace",
+      "Sobble","Drizzile","Inteleon","Corviknight","Toxtricity","Tinkaton","Grimmsnarl","Obstagoon","Sirfetch'd",
+      "Dragapult","Zacian","Zamazenta","Eternatus","Urshifu","Zarude","Regieleki","Regidrago","Glastrier","Spectrier",
+      "Calyrex","Sprigatito","Floragato","Meowscarada","Fuecoco","Crocalor","Skeledirge","Quaxly","Quaxwell","Quaquaval",
+      "Armarouge","Ceruledge","Bellibolt","Pawmot","Palafin","Kingambit","Great Tusk","Scream Tail","Brute Bonnet",
+      "Flutter Mane","Slither Wing","Sandy Shocks","Iron Treads","Iron Bundle","Iron Hands","Iron Jugulis","Iron Moth",
+      "Iron Thorns","Baxcalibur","Gholdengo","Wo-Chien","Chien-Pao","Ting-Lu","Chi-Yu","Roaring Moon","Iron Valiant",
+      "Koraidon","Miraidon","Walking Wake","Iron Leaves","Dipplin","Poltchageist","Sinistcha","Okidogi","Munkidori",
+      "Fezandipiti","Ogerpon","Archaludon","Hydrapple","Gouging Fire","Raging Bolt","Iron Boulder","Iron Crown","Terapagos","Pecharunt"
+    ];
+
+    const BLACKLISTED_OCR_WORDS = new Set([
+      'BASIC', 'BASICO', 'BÁSICO', 'STAGE', 'ESTAGIO', 'ESTÁGIO', 'EVOLVES', 'EVOLUI',
+      'PONTOS', 'VIDA', 'TRAINER', 'TREINADOR', 'ITEM', 'SUPPORTER', 'APOIADOR',
+      'ENERGY', 'ENERGIA', 'POKEMON', 'POKÉMON', 'CARD', 'CARTA', 'RULE', 'REGRA',
+      'WEAKNESS', 'FRAQUEZA', 'RESISTANCE', 'RESISTENCIA', 'RESISTÊNCIA', 'RETREAT',
+      'RECUO', 'DAMAGE', 'DANO', 'ATTACK', 'ATAQUE', 'ABILITY', 'HABILIDADE',
+      'VMAX', 'VSTAR', 'EX', 'GX', 'MEGA', 'TAG', 'TEAM', 'HP', 'PV', 'PS',
+      'THE', 'AND', 'FOR', 'WITH', 'FROM', 'THIS', 'THAT', 'YOUR', 'EACH',
+      'FLIP', 'COIN', 'HEADS', 'TAILS', 'SHUFFLE', 'DECK', 'DISCARD', 'BENCH',
+      'ACTIVE', 'SPECIAL', 'ILUST', 'ILLUS', 'GAME', 'FREAK', 'NINTENDO', 'CREATURES'
+    ]);
+
+    function levenshteinDistance(a, b) {
+      const an = a ? a.length : 0;
+      const bn = b ? b.length : 0;
+      if (an === 0) return bn;
+      if (bn === 0) return an;
+      const matrix = [];
+      for (let i = 0; i <= bn; ++i) matrix[i] = [i];
+      for (let i = 0; i <= an; ++i) matrix[0][i] = i;
+      for (let i = 1; i <= bn; ++i) {
+        for (let j = 1; j <= an; ++j) {
+          if (b.charAt(i - 1).toLowerCase() === a.charAt(j - 1).toLowerCase()) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+            );
+          }
+        }
+      }
+      return matrix[bn][an];
+    }
+
+    function stringSimilarity(s1, s2) {
+      let longer = s1.toLowerCase().trim();
+      let shorter = s2.toLowerCase().trim();
+      if (longer.length < shorter.length) {
+        const temp = longer; longer = shorter; shorter = temp;
+      }
+      const longerLength = longer.length;
+      if (longerLength === 0) return 1.0;
+      return (longerLength - levenshteinDistance(longer, shorter)) / parseFloat(longerLength);
+    }
+
+    function preprocessCardCanvas(imgElement, cropTopPercent = 0.36) {
+      const canvas = document.createElement('canvas');
+      const naturalW = imgElement.naturalWidth || imgElement.width || 600;
+      const naturalH = imgElement.naturalHeight || imgElement.height || 800;
+      
+      const cropH = Math.max(80, Math.floor(naturalH * cropTopPercent));
+      canvas.width = naturalW;
+      canvas.height = cropH;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(imgElement, 0, 0, naturalW, cropH, 0, 0, naturalW, cropH);
+      
+      try {
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+          let v = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          v = (v - 128) * 1.5 + 128;
+          v = Math.min(255, Math.max(0, v));
+          d[i] = v;
+          d[i + 1] = v;
+          d[i + 2] = v;
+        }
+        ctx.putImageData(imgData, 0, 0);
+      } catch (e) {
+        console.warn('Filtro de contraste do canvas:', e);
+      }
+      return canvas;
+    }
+
+    async function fetchTcgdexCards(name) {
+      if (!name) return [];
+      try {
+        let res = await fetch(`https://api.tcgdex.net/v2/pt/cards?name=${encodeURIComponent(name)}`);
+        if (res.ok) {
+          let data = await res.json();
+          if (Array.isArray(data) && data.length > 0) return data;
+        }
+        // Fallback para catálogo em inglês
+        res = await fetch(`https://api.tcgdex.net/v2/en/cards?name=${encodeURIComponent(name)}`);
+        if (res.ok) {
+          let data = await res.json();
+          if (Array.isArray(data) && data.length > 0) return data;
+        }
+      } catch (err) {
+        console.warn('Erro ao consultar TCGdex:', err);
+      }
+      return [];
+    }
+
+    // Estado do último scan realizado
+    let activeScanState = {
+      userImg: '',
+      detectedName: '',
+      confidence: 0,
+      detectedTokens: [],
+      cards: [],
+      selectedCardIndex: 0
+    };
+
+    async function processScannedCardImage(imgData) {
       const container = document.getElementById('scanResultContainer');
       container.classList.remove('hidden');
       container.innerHTML = `
-        <div class="text-center py-6 space-y-2">
-          <i data-lucide="loader-2" class="w-8 h-8 text-amber-400 animate-spin mx-auto"></i>
-          <p class="text-xs font-bold text-white">Analisando imagem da carta com IA...</p>
-          <p class="text-[10px] text-slate-400">Identificando personagem, número de série, raridade e cotação...</p>
+        <div class="text-center py-6 space-y-3">
+          <div class="relative w-12 h-12 mx-auto">
+            <i data-lucide="loader-2" class="w-12 h-12 text-amber-400 animate-spin"></i>
+            <i data-lucide="scan" class="w-6 h-6 text-amber-300 absolute inset-0 m-auto"></i>
+          </div>
+          <div>
+            <p id="ocrStatusText" class="text-xs font-black text-white">Carregando motor OCR de Visão...</p>
+            <div class="w-56 bg-slate-800 rounded-full h-1.5 mx-auto mt-2.5 overflow-hidden">
+              <div id="ocrProgressBar" class="bg-gradient-to-r from-amber-500 to-rose-500 h-1.5 rounded-full transition-all duration-300" style="width: 20%"></div>
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-400">Processando frame da câmera e lendo título da carta...</p>
         </div>
       `;
       lucide.createIcons();
 
-      // Mock dinâmico de alta fidelidade com precificação de mercado
-      setTimeout(() => {
-        container.innerHTML = `
-          <div class="flex flex-col sm:flex-row items-center gap-4">
-            <img src="${imgData}" class="w-28 h-36 object-contain rounded-xl border border-amber-500/40 bg-slate-950 shadow-xl">
-            <div class="flex-1 space-y-1.5 text-left">
-              <div class="flex items-center gap-2">
-                <span class="text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-black uppercase">Reconhecimento 99.4%</span>
-                <span class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-black uppercase">Rara Holo</span>
+      const updateProgress = (text, pct) => {
+        const st = document.getElementById('ocrStatusText');
+        const pb = document.getElementById('ocrProgressBar');
+        if (st) st.innerText = text;
+        if (pb) pb.style.width = `${Math.max(15, Math.min(100, pct))}%`;
+      };
+
+      try {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = imgData;
+        });
+
+        updateProgress('Enquadrando e aplicando filtros de OCR...', 35);
+        const headerCanvas = preprocessCardCanvas(img, 0.38);
+
+        let rawText = '';
+        let detectedTokens = [];
+
+        if (typeof Tesseract !== 'undefined') {
+          updateProgress('Lendo texto com Tesseract OCR...', 55);
+          try {
+            const worker = await Tesseract.createWorker(['por', 'eng']);
+            const res = await worker.recognize(headerCanvas);
+            rawText = res.data.text || '';
+            await worker.terminate();
+          } catch (workerErr) {
+            console.warn('Worker direto falhou, tentando fallback Tesseract.recognize:', workerErr);
+            const res = await Tesseract.recognize(headerCanvas, 'eng', {
+              logger: m => {
+                if (m.status === 'recognizing text') {
+                  const p = Math.round((m.progress || 0) * 100);
+                  updateProgress(`Lendo texto da carta (${p}%)...`, 50 + Math.round(p * 0.35));
+                }
+              }
+            });
+            rawText = res.data.text || '';
+          }
+        } else {
+          console.warn('Tesseract não carregou, tentando fallback...');
+        }
+
+        updateProgress('Cruzando com banco de Pokémons e TCGdex...', 88);
+
+        // Limpeza dos tokens detectados
+        const words = rawText
+          .replace(/[\n\r\t]/g, ' ')
+          .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚãõÃÕâêîôûÂÊÎÔÛçÇ\- ]/g, ' ')
+          .split(' ')
+          .map(w => w.trim())
+          .filter(w => w.length >= 3 && !BLACKLISTED_OCR_WORDS.has(w.toUpperCase()));
+
+        detectedTokens = Array.from(new Set(words));
+
+        // Matching difuso com a lista de Pokémons
+        let bestMatchName = null;
+        let bestMatchScore = 0;
+
+        for (const token of detectedTokens) {
+          for (const pokeName of POKEMON_NAMES_LIST) {
+            const sim = stringSimilarity(token, pokeName);
+            if (sim > bestMatchScore) {
+              bestMatchScore = sim;
+              bestMatchName = pokeName;
+            }
+          }
+        }
+
+        let queryName = (bestMatchScore >= 0.65 && bestMatchName) ? bestMatchName : (detectedTokens[0] || '');
+
+        let cards = [];
+        if (queryName) {
+          cards = await fetchTcgdexCards(queryName);
+        }
+
+        // Se a primeira palavra não achou cartas, tenta as demais palavras detectadas
+        if (cards.length === 0 && detectedTokens.length > 0) {
+          for (let i = 0; i < Math.min(detectedTokens.length, 5); i++) {
+            const tk = detectedTokens[i];
+            if (tk !== queryName) {
+              const altCards = await fetchTcgdexCards(tk);
+              if (altCards.length > 0) {
+                queryName = tk;
+                cards = altCards;
+                bestMatchScore = 0.80;
+                break;
+              }
+            }
+          }
+        }
+
+        updateProgress('Concluído!', 100);
+
+        activeScanState = {
+          userImg: imgData,
+          detectedName: queryName || 'Não identificado',
+          confidence: queryName ? Math.max(65, Math.round(bestMatchScore * 100)) : 0,
+          detectedTokens: detectedTokens.slice(0, 8),
+          cards: cards || [],
+          selectedCardIndex: 0
+        };
+
+        renderScanResultUI();
+
+      } catch (err) {
+        console.error('Erro no processamento OCR:', err);
+        renderScanFallbackUI(imgData);
+      }
+    }
+
+    function renderScanResultUI() {
+      const container = document.getElementById('scanResultContainer');
+      const state = activeScanState;
+      const selectedCard = (state.cards && state.cards.length > 0) ? state.cards[state.selectedCardIndex] : null;
+
+      const officialImg = selectedCard && selectedCard.image 
+        ? `${selectedCard.image}/high.webp` 
+        : (selectedCard ? CARD_BACK_FALLBACK : state.userImg);
+
+      const cardName = selectedCard ? selectedCard.name : (state.detectedName || 'Pokémon Desconhecido');
+      const cardLocalId = selectedCard ? (selectedCard.localId || '') : '';
+      const cardId = selectedCard ? selectedCard.id : `scan_custom_${Date.now()}`;
+
+      let tokensHtml = '';
+      if (state.detectedTokens.length > 0) {
+        tokensHtml = `
+          <div class="flex items-center gap-1.5 flex-wrap pt-1">
+            <span class="text-[10px] text-slate-400 font-bold">Textos lidos:</span>
+            ${state.detectedTokens.map(tk => `
+              <button onclick="reSearchScannedCard('${tk.replace(/'/g, "\\'")}')" 
+                      class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-300 border border-slate-700 transition-all">
+                🔍 ${tk}
+              </button>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      let editionsCarouselHtml = '';
+      if (state.cards.length > 1) {
+        editionsCarouselHtml = `
+          <div class="space-y-1.5 pt-2 border-t border-slate-800">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="font-bold text-slate-300">Escolha a edição/arte correta (${state.cards.length} versões):</span>
+              <span class="text-amber-400 font-bold">#${state.selectedCardIndex + 1} de ${state.cards.length}</span>
+            </div>
+            <div class="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+              ${state.cards.slice(0, 10).map((c, idx) => `
+                <button onclick="selectScannedCardEdition(${idx})" 
+                        class="shrink-0 p-1 rounded-xl border-2 transition-all ${idx === state.selectedCardIndex ? 'border-amber-400 bg-amber-500/10' : 'border-slate-800 hover:border-slate-600 bg-slate-950'}">
+                  <img src="${c.image ? c.image + '/low.webp' : CARD_BACK_FALLBACK}" 
+                       class="w-12 h-16 object-contain rounded-lg pointer-events-none"
+                       onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
+                  <p class="text-[9px] font-bold text-slate-300 mt-1 truncate max-w-12 text-center">#${c.localId || idx+1}</p>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div class="space-y-4">
+          <!-- Cabeçalho de Confirmação do Reconhecimento -->
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+              <h3 class="text-sm font-black text-white">Carta Reconhecida com Sucesso</h3>
+            </div>
+            <div class="flex items-center gap-1.5">
+              ${state.confidence > 0 ? `
+                <span class="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-black uppercase">
+                  ⚡ Confiança ${state.confidence}%
+                </span>
+              ` : `
+                <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-black uppercase">
+                  Ajuste Manual
+                </span>
+              `}
+            </div>
+          </div>
+
+          <!-- Comparação Foto do Usuário vs Carta Oficial -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800/80">
+            <!-- Foto Capturada -->
+            <div class="flex items-center gap-3 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+              <img src="${state.userImg}" class="w-16 h-22 object-contain rounded-lg border border-amber-500/40 bg-black">
+              <div>
+                <span class="text-[9px] font-black uppercase text-amber-400 tracking-wider">Sua Captura</span>
+                <p class="text-xs font-bold text-white">Foto da Câmera</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">Enquadramento OK</p>
               </div>
-              <h4 class="text-base font-black text-white">Pikachu Ilustração Rara (151)</h4>
-              <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-300 pt-1">
-                <p><b>Fabricante:</b> The Pokémon Co.</p>
-                <p><b>Ano:</b> 2023 / 151 Brasil</p>
-                <p><b>Estado:</b> <span class="text-emerald-400 font-bold">Near Mint (9.0)</span></p>
-                <p><b>Cotação:</b> <span class="text-emerald-400 font-black">R$ 85,00</span></p>
+            </div>
+
+            <!-- Correspondência Oficial -->
+            <div class="flex items-center gap-3 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+              <img src="${officialImg}" class="w-16 h-22 object-contain rounded-lg border border-emerald-500/40 bg-black"
+                   onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
+              <div>
+                <span class="text-[9px] font-black uppercase text-emerald-400 tracking-wider">Match no Catálogo</span>
+                <p class="text-xs font-black text-white truncate max-w-[130px]">${cardName}</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">ID #${cardLocalId || 'Oficial'}</p>
               </div>
             </div>
           </div>
-          <div class="pt-3 border-t border-slate-800 flex gap-2">
-            <button onclick="addToInventory('scan_pika_${Date.now()}', 'Pikachu (151 Especial)', '${imgData}', '151'); switchTab('inventory');" 
-                    class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
-              <i data-lucide="check" class="w-4 h-4"></i>
-              <span>Guardar no Inventário MG</span>
+
+          <!-- Ajuste ou Refinamento Rápido de Busca -->
+          <div class="space-y-2">
+            <div class="flex gap-2">
+              <input type="text" id="scanManualInput" value="${cardName}" placeholder="Nome do Pokémon..."
+                     onkeydown="if(event.key==='Enter') reSearchScannedCard(this.value);"
+                     class="flex-1 px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+              <button onclick="reSearchScannedCard(document.getElementById('scanManualInput').value)" 
+                      class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl transition border border-slate-700 flex items-center gap-1.5">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                <span>Buscar</span>
+              </button>
+            </div>
+            ${tokensHtml}
+          </div>
+
+          <!-- Carrossel de Versões se houver -->
+          ${editionsCarouselHtml}
+
+          <!-- Formulário de Estado e Ação de Guardar -->
+          <div class="pt-3 border-t border-slate-800 space-y-3">
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 mb-1">Estado de Conservação:</label>
+                <select id="scanCardCondition" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 font-semibold focus:outline-none">
+                  <option value="Near Mint (Ótima)" selected>Near Mint (Ótima / Perfeita)</option>
+                  <option value="Lightly Played (Boa)">Lightly Played (Pouco Usada)</option>
+                  <option value="Moderately Played (Marcas)">Moderately Played (Marcas leves)</option>
+                  <option value="Damaged (Danificada)">Damaged (Danificada)</option>
+                </select>
+              </div>
+              <div class="flex items-center pt-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="scanCardForTrade" class="w-4 h-4 rounded text-amber-500 bg-slate-950 border-slate-700">
+                  <span class="text-[11px] font-bold text-slate-300">Liberar para Troca</span>
+                </label>
+              </div>
+            </div>
+
+            <button onclick="saveScannedCardToInventory()" 
+                    class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
+              <i data-lucide="check-circle" class="w-4 h-4"></i>
+              <span>Guardar ${cardName} no Inventário MG</span>
             </button>
           </div>
-        `;
-        lucide.createIcons();
-      }, 1300);
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function renderScanFallbackUI(imgData) {
+      const container = document.getElementById('scanResultContainer');
+      container.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center gap-2 text-rose-400 text-xs font-bold border-b border-slate-800 pb-2">
+            <i data-lucide="alert-circle" class="w-4 h-4"></i>
+            <span>Não foi possível identificar o nome automaticamente pela foto.</span>
+          </div>
+          <div class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+            <img src="${imgData}" class="w-16 h-22 object-contain rounded-lg border border-slate-700 bg-black">
+            <div class="flex-1 space-y-1">
+              <p class="text-xs font-bold text-white">Digite o nome do Pokémon da carta:</p>
+              <div class="flex gap-2">
+                <input type="text" id="scanFallbackInput" placeholder="Ex: Charizard, Mewtwo..." 
+                       class="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-bold text-white">
+                <button onclick="reSearchScannedCard(document.getElementById('scanFallbackInput').value)"
+                        class="px-3 py-1.5 bg-amber-500 text-slate-950 font-black text-xs rounded-lg">
+                  Buscar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function selectScannedCardEdition(idx) {
+      activeScanState.selectedCardIndex = idx;
+      renderScanResultUI();
+    }
+
+    async function reSearchScannedCard(name) {
+      if (!name || !name.trim()) return;
+      const cleanName = name.trim();
+      const container = document.getElementById('scanResultContainer');
+      container.innerHTML = `
+        <div class="text-center py-6">
+          <i data-lucide="loader-2" class="w-6 h-6 text-amber-400 animate-spin mx-auto mb-2"></i>
+          <p class="text-xs font-bold text-white">Buscando versões de "${cleanName}"...</p>
+        </div>
+      `;
+      lucide.createIcons();
+
+      const cards = await fetchTcgdexCards(cleanName);
+      activeScanState.detectedName = cleanName;
+      activeScanState.cards = cards;
+      activeScanState.selectedCardIndex = 0;
+      activeScanState.confidence = cards.length > 0 ? 95 : 0;
+      renderScanResultUI();
+    }
+
+    function saveScannedCardToInventory() {
+      const state = activeScanState;
+      const selectedCard = (state.cards && state.cards.length > 0) ? state.cards[state.selectedCardIndex] : null;
+      
+      const name = selectedCard ? selectedCard.name : (state.detectedName || 'Pokémon');
+      const imgUrl = selectedCard && selectedCard.image ? `${selectedCard.image}/high.webp` : state.userImg;
+      const localId = selectedCard ? (selectedCard.localId || '') : '';
+      const id = selectedCard ? selectedCard.id : `scan_${Date.now()}`;
+      const condition = document.getElementById('scanCardCondition')?.value || 'Near Mint (Ótima)';
+      const forTrade = document.getElementById('scanCardForTrade')?.checked || false;
+
+      const existing = inventory.find(c => c.id === id);
+      if (existing) {
+        existing.quantity = (existing.quantity || 1) + 1;
+        existing.condition = condition;
+        if (forTrade) existing.forTrade = true;
+      } else {
+        inventory.push({
+          id,
+          name,
+          image: imgUrl,
+          localId,
+          quantity: 1,
+          forTrade,
+          condition
+        });
+      }
+
+      saveInventory();
+      showToast(`🎉 ${name} guardado com sucesso no Inventário!`);
+      
+      // Oculta resultado do scanner e redireciona para o inventário
+      document.getElementById('scanResultContainer').classList.add('hidden');
+      switchTab('inventory');
     }
 
     // ==========================================
