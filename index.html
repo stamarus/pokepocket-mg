@@ -143,12 +143,41 @@
           <button onclick="quickSearch('Lucario')" class="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 shrink-0">🥊 Lucario</button>
           <button onclick="quickSearch('Eevee')" class="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 shrink-0">🦊 Eevee</button>
         </div>
+
+        <!-- Filtro de Origem / Bandeirinhas (Brasil 🇧🇷, EUA 🇺🇸 e Japão 🇯🇵) -->
+        <div class="flex items-center gap-2 flex-wrap pt-3 border-t border-slate-800/80">
+          <span class="text-xs font-bold text-slate-400 mr-1 flex items-center gap-1.5 shrink-0">
+            <i data-lucide="globe-2" class="w-3.5 h-3.5 text-sky-400"></i> Origem das Cartas:
+          </span>
+          <button id="originBtn-pt" onclick="toggleOriginFilter('pt')"
+                  class="px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border bg-emerald-950/70 text-emerald-300 border-emerald-500/60 shadow-sm cursor-pointer ring-1 ring-emerald-500/40">
+            <span class="text-sm">🇧🇷</span> <span>Brasil (PT)</span>
+            <span class="origin-dot w-2 h-2 rounded-full bg-emerald-400"></span>
+          </button>
+          <button id="originBtn-en" onclick="toggleOriginFilter('en')"
+                  class="px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border bg-blue-950/70 text-blue-300 border-blue-500/60 shadow-sm cursor-pointer ring-1 ring-blue-500/40">
+            <span class="text-sm">🇺🇸</span> <span>EUA (EN)</span>
+            <span class="origin-dot w-2 h-2 rounded-full bg-blue-400"></span>
+          </button>
+          <button id="originBtn-ja" onclick="toggleOriginFilter('ja')"
+                  class="px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border bg-rose-950/70 text-rose-300 border-rose-500/60 shadow-sm cursor-pointer ring-1 ring-rose-500/40">
+            <span class="text-sm">🇯🇵</span> <span>Japão (JA)</span>
+            <span class="origin-dot w-2 h-2 rounded-full bg-rose-400"></span>
+          </button>
+          <div class="ml-auto flex items-center gap-2">
+            <button onclick="selectAllOrigins(true)" class="text-[11px] font-bold text-slate-400 hover:text-white underline">Marcar Todas</button>
+          </div>
+        </div>
       </div>
 
       <!-- Results Info -->
-      <div class="flex items-center justify-between text-xs text-slate-400 px-1">
-        <span id="catalogResultsCount">Mostrando cartinhas oficiais da coleção</span>
-        <span>Português BR (TCGdex API & Preços)</span>
+      <div class="flex items-center justify-between text-xs text-slate-400 px-1 flex-wrap gap-2">
+        <div id="catalogResultsCount" class="flex items-center gap-2 flex-wrap">
+          <span>Mostrando cartinhas oficiais da coleção</span>
+        </div>
+        <span class="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+          <i data-lucide="layers" class="w-3.5 h-3.5 text-poke-red"></i> TCGdex Multilateral & PokéAPI
+        </span>
       </div>
 
       <!-- Cards Grid -->
@@ -226,6 +255,32 @@
             <span>Exportar Backup</span>
           </button>
         </div>
+      </div>
+
+      <!-- Filtro de Origem na Coleção -->
+      <div class="flex items-center justify-between flex-wrap gap-3 bg-slate-950/70 px-4 py-3 rounded-2xl border border-slate-800">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-bold text-slate-400 mr-1 flex items-center gap-1.5">
+            <i data-lucide="filter" class="w-3.5 h-3.5 text-emerald-400"></i> Filtrar Origem:
+          </span>
+          <button id="invOriginBtn-all" onclick="setInventoryOriginFilter('all')"
+                  class="px-3 py-1 rounded-xl text-xs font-black bg-emerald-500 text-slate-950 shadow-md transition-all cursor-pointer">
+            Todas
+          </button>
+          <button id="invOriginBtn-pt" onclick="setInventoryOriginFilter('pt')"
+                  class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer">
+            <span>🇧🇷</span> <span>Brasil</span>
+          </button>
+          <button id="invOriginBtn-en" onclick="setInventoryOriginFilter('en')"
+                  class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer">
+            <span>🇺🇸</span> <span>EUA</span>
+          </button>
+          <button id="invOriginBtn-ja" onclick="setInventoryOriginFilter('ja')"
+                  class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer">
+            <span>🇯🇵</span> <span>Japão</span>
+          </button>
+        </div>
+        <span id="invFilterSummary" class="text-xs text-slate-400 font-semibold"></span>
       </div>
 
       <!-- Inventory Grid -->
@@ -318,6 +373,7 @@
       <div class="relative overflow-hidden rounded-2xl bg-slate-950 aspect-[2.5/3.5] max-h-[55vh] flex items-center justify-center border border-slate-800 shadow-2xl mx-auto">
         <img id="zoomCardImg" src="" alt="Carta Pokémon" class="w-full h-full object-contain transition-transform duration-300 hover:scale-105" loading="lazy">
         <span id="zoomCardBadge" class="absolute top-3 left-3 bg-poke-red text-white font-black text-xs px-2.5 py-1 rounded-full shadow-lg hidden">Na Coleção</span>
+        <div id="zoomCardOriginBadge" class="absolute top-3 right-3 hidden z-10"></div>
       </div>
 
       <!-- Detalhes da Carta e Precificação -->
@@ -325,7 +381,8 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
           <div>
             <h3 id="zoomCardName" class="text-xl font-black text-white">Nome da Carta</h3>
-            <div class="flex items-center gap-2 mt-0.5 justify-center sm:justify-start">
+            <div class="flex items-center gap-2 mt-0.5 justify-center sm:justify-start flex-wrap">
+              <span id="zoomCardOriginPill" class="text-[10px] font-black px-2 py-0.5 rounded-md border flex items-center gap-1"></span>
               <span id="zoomCardId" class="text-xs text-slate-400 font-mono">#000</span>
               <span id="zoomCardRarity" class="text-[10px] bg-slate-800 text-amber-300 font-black px-2 py-0.5 rounded-md border border-slate-700">Comum</span>
             </div>
@@ -421,10 +478,24 @@
     // ==========================================
     const STORAGE_KEY_INV = 'pokepocket_mg_inventory_v1';
     const STORAGE_KEY_FRIEND = 'pokepocket_mg_friend_v1';
+    const STORAGE_KEY_ORIGINS = 'pokepocket_mg_origins_v1';
 
     let inventory = JSON.parse(localStorage.getItem(STORAGE_KEY_INV) || '[]');
     let friendOfferList = JSON.parse(localStorage.getItem(STORAGE_KEY_FRIEND) || '[]');
+    let activeOriginFilters = JSON.parse(localStorage.getItem(STORAGE_KEY_ORIGINS) || '{"pt":true,"en":true,"ja":true}');
+    let currentInventoryOriginFilter = 'all';
     let currentTab = 'catalog';
+
+    // Migração de cartas legadas para garantir a propriedade lang em todas as cartas da pasta
+    inventory.forEach(c => {
+      if (!c.lang) {
+        if (c.id && (c.id.startsWith('PMCG') || c.id.startsWith('neo') || c.id.startsWith('MC-') || c.id.startsWith('SV-P') || c.id.startsWith('M-P') || c.id.startsWith('PCG') || c.id.startsWith('VS') || /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(c.name || ''))) {
+          c.lang = 'ja';
+        } else {
+          c.lang = 'pt';
+        }
+      }
+    });
 
     function saveInventory() {
       localStorage.setItem(STORAGE_KEY_INV, JSON.stringify(inventory));
@@ -484,87 +555,281 @@
     // Fallback de arte com verso oficial Pokémon para cartas sem foto no TCGdex
     const CARD_BACK_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 245 342' width='245' height='342'%3E%3Crect width='245' height='342' rx='16' fill='%231e293b' stroke='%23334155' stroke-width='4'/%3E%3Crect x='10' y='10' width='225' height='322' rx='12' fill='%230f172a' stroke='%23475569' stroke-dasharray='6 6' stroke-width='2'/%3E%3Ccircle cx='122.5' cy='150' r='55' fill='%23ef4444' stroke='%23020617' stroke-width='6'/%3E%3Cpath d='M67.5 150 A55 55 0 0 0 177.5 150 Z' fill='%23f8fafc' stroke='%23020617' stroke-width='6'/%3E%3Cline x1='67.5' y1='150' x2='177.5' y2='150' stroke='%23020617' stroke-width='8'/%3E%3Ccircle cx='122.5' cy='150' r='18' fill='%23020617'/%3E%3Ccircle cx='122.5' cy='150' r='12' fill='white'/%3E%3Ccircle cx='122.5' cy='150' r='6' fill='%23e2e8f0'/%3E%3Ctext x='122.5' y='250' font-family='sans-serif' font-size='13' font-weight='900' fill='%23e2e8f0' text-anchor='middle' letter-spacing='1'%3EEDIÇÃO ESPECIAL%3C/text%3E%3Ctext x='122.5' y='272' font-family='sans-serif' font-size='10' font-weight='700' fill='%2394a3b8' text-anchor='middle'%3EFoto indisponível no TCG%3C/text%3E%3C/svg%3E";
 
-    // Cache de cartas buscadas para o modal de zoom
+    // Configuração das Origens de Cartas (Brasil, EUA e Japão)
+    const ORIGIN_CONFIG = {
+      pt: { code: 'pt', flag: '🇧🇷', label: 'Brasil', short: 'BR', color: 'bg-emerald-950/90 text-emerald-300 border-emerald-500/50' },
+      en: { code: 'en', flag: '🇺🇸', label: 'EUA', short: 'US', color: 'bg-blue-950/90 text-blue-300 border-blue-500/50' },
+      ja: { code: 'ja', flag: '🇯🇵', label: 'Japão', short: 'JP', color: 'bg-rose-950/90 text-rose-300 border-rose-500/50' }
+    };
+
+    function getCardOriginBadge(lang) {
+      const cfg = ORIGIN_CONFIG[lang] || ORIGIN_CONFIG.pt;
+      return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-black border ${cfg.color} shadow-sm backdrop-blur-md pointer-events-none">
+        <span class="text-xs leading-none">${cfg.flag}</span>
+        <span>${cfg.short}</span>
+      </span>`;
+    }
+
+    // Cache de cartas buscadas
     let currentCatalogCards = [];
+    let rawCatalogResults = { pt: [], en: [], ja: [] };
+    let lastCatalogSearchQuery = 'Pikachu';
+
+    // Dicionário local rápido para pokémons populares em japonês
+    const POKEMON_JA_NAMES = {
+      pikachu: 'ピカチュウ',
+      charizard: 'リザードン',
+      mewtwo: 'ミュウツー',
+      mew: 'ミュウ',
+      gengar: 'ゲンガー',
+      lucario: 'ルカリオ',
+      eevee: 'イーブイ',
+      blastoise: 'カメックス',
+      venusaur: 'フシギバナ',
+      rayquaza: 'レックウザ',
+      lugia: 'ルギア',
+      hooh: 'ホウオウ',
+      'ho-oh': 'ホウオウ',
+      arceus: 'アルセウス',
+      dialga: 'ディアルガ',
+      palkia: 'パルキア',
+      giratina: 'ギラティナ',
+      snorlax: 'カビゴン',
+      gyarados: 'ギャラドス',
+      greninja: 'ゲッコウガ',
+      umbreon: 'ブラッキー',
+      sylveon: 'ニンフィア',
+      espeon: 'エーフィ',
+      glaceon: 'グレイシア',
+      leafeon: 'リーフィア',
+      vaporeon: 'シャワーズ',
+      jolteon: 'サンダース',
+      flareon: 'ブースター',
+      mimikyu: 'ミミッキュ',
+      garchomp: 'ガブリアス',
+      gardevoir: 'サーナイト',
+      tyranitar: 'バンギラス',
+      dragonite: 'カイリュー',
+      squirtle: 'ゼニガメ',
+      bulbasaur: 'フシギダネ',
+      charmander: 'ヒトカゲ'
+    };
+
+    async function getJapanesePokemonName(name) {
+      if (!name) return null;
+      const clean = name.trim();
+      if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(clean)) return clean;
+      const key = clean.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (POKEMON_JA_NAMES[key]) return POKEMON_JA_NAMES[key];
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 1800);
+        const res = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${key}`, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (res.ok) {
+          const data = await res.json();
+          const jaEntry = data.names?.find(n => n.language?.name === 'ja' || n.language?.name === 'ja-Hrkt');
+          if (jaEntry && jaEntry.name) return jaEntry.name;
+        }
+      } catch (e) {
+        // Fallback silencioso
+      }
+      return null;
+    }
 
     // ==========================================
-    // BUSCA TCGDEX API (EM PORTUGUÊS BR)
+    // BUSCA TCGDEX MULTILATERAL (🇧🇷 BR, 🇺🇸 EUA, 🇯🇵 JP)
     // ==========================================
     async function searchCards(query) {
       const q = query || document.getElementById('catalogSearchInput').value.trim() || 'Pikachu';
+      lastCatalogSearchQuery = q;
       const grid = document.getElementById('catalogGrid');
       const countEl = document.getElementById('catalogResultsCount');
 
       grid.innerHTML = `
         <div class="col-span-full text-center py-16">
           <i data-lucide="loader-2" class="w-8 h-8 text-poke-red animate-spin mx-auto mb-2"></i>
-          <p class="text-xs text-slate-400">Buscando cartinhas de "${q}" no banco Pokémon TCG...</p>
+          <p class="text-xs text-slate-400">Buscando cartinhas de "${q}" nos bancos Pokémon (Brasil 🇧🇷, EUA 🇺🇸 e Japão 🇯🇵)...</p>
         </div>
       `;
       lucide.createIcons();
 
       try {
-        const res = await fetch(`https://api.tcgdex.net/v2/pt/cards?name=${encodeURIComponent(q)}`);
-        const data = await res.json();
+        // Resolve nome japonês para consultar catálogo oficial do Japão
+        const jaName = await getJapanesePokemonName(q);
 
-        if (!data || data.length === 0) {
-          grid.innerHTML = `
-            <div class="col-span-full text-center py-16">
-              <p class="text-sm font-bold text-slate-300">Nenhuma carta encontrada para "${q}".</p>
-              <p class="text-xs text-slate-500 mt-1">Tente o nome em português ou inglês.</p>
-            </div>
-          `;
-          countEl.innerText = '0 cartas encontradas';
-          currentCatalogCards = [];
-          return;
-        }
+        const [ptData, enData, jaData] = await Promise.all([
+          // Brasil (PT)
+          fetch(`https://api.tcgdex.net/v2/pt/cards?name=${encodeURIComponent(q)}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(arr => (Array.isArray(arr) ? arr : []).map(c => ({ ...c, lang: 'pt' })))
+            .catch(() => []),
 
-        currentCatalogCards = data.slice(0, 30);
-        countEl.innerText = `${data.length} cartas encontradas para "${q}"`;
-        let html = '';
+          // EUA / Americanas (EN)
+          fetch(`https://api.tcgdex.net/v2/en/cards?name=${encodeURIComponent(q)}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(arr => (Array.isArray(arr) ? arr : []).map(c => ({ ...c, lang: 'en' })))
+            .catch(() => []),
 
-        currentCatalogCards.forEach((card, idx) => {
-          const imgUrl = card.image ? `${card.image}/high.webp` : CARD_BACK_FALLBACK;
-          const inInv = inventory.find(c => c.id === card.id);
-          const qty = inInv ? inInv.quantity : 0;
-          const safeName = (card.name || 'Pokémon').replace(/'/g, "\\'");
+          // Japão (JA)
+          fetch(`https://api.tcgdex.net/v2/ja/cards?name=${encodeURIComponent(jaName || q)}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(arr => (Array.isArray(arr) ? arr : []).map(c => ({ ...c, lang: 'ja', jaTranslated: !!jaName, ptName: q })))
+            .catch(() => [])
+        ]);
 
-          html += `
-            <div class="bg-slate-950 rounded-2xl border border-slate-800 p-3 flex flex-col justify-between holo-card group transition-all">
-              <div onclick="openCardZoom('catalog', ${idx})" class="relative overflow-hidden rounded-xl bg-slate-900 aspect-[2.5/3.5] mb-2 flex items-center justify-center cursor-pointer group-hover:ring-2 group-hover:ring-poke-red/50 transition-all">
-                <img src="${imgUrl}" alt="${card.name}" class="w-full h-full object-contain pointer-events-none" loading="lazy"
-                     onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
-                ${qty > 0 ? `<span class="absolute top-2 right-2 bg-emerald-500 text-white font-black text-[10px] px-2 py-0.5 rounded-full shadow-md z-10">Tenho ${qty}x</span>` : ''}
-                <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <span class="bg-slate-900/90 text-white font-bold text-[11px] px-2.5 py-1 rounded-full border border-slate-700 flex items-center gap-1 shadow-lg">
-                    <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-poke-red"></i>
-                    <span>Ver Carta</span>
-                  </span>
-                </div>
-              </div>
+        rawCatalogResults = {
+          pt: ptData,
+          en: enData,
+          ja: jaData
+        };
 
-              <div onclick="openCardZoom('catalog', ${idx})" class="cursor-pointer">
-                <h4 class="text-xs font-black text-white truncate hover:text-poke-red transition-colors">${card.name}</h4>
-                <p class="text-[10px] text-slate-400">#${card.localId || 'N/A'}</p>
-              </div>
-
-              <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
-                <button onclick="addToInventory('${card.id}', '${safeName}', '${imgUrl}', '${card.localId || ''}')"
-                        class="flex-1 py-1.5 bg-poke-red hover:bg-rose-600 text-white font-bold text-[11px] rounded-lg transition-all flex items-center justify-center gap-1 shadow-sm">
-                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                  <span>Guardar</span>
-                </button>
-              </div>
-            </div>
-          `;
-        });
-
-        grid.innerHTML = html;
-        lucide.createIcons();
+        renderCatalogResults(q);
       } catch (err) {
         console.error(err);
-        grid.innerHTML = `<p class="col-span-full text-center text-xs text-rose-400 py-8">Erro ao conectar com o catálogo de cartas. Verifique a conexão.</p>`;
+        grid.innerHTML = `<p class="col-span-full text-center text-xs text-rose-400 py-8">Erro ao conectar com o catálogo de cartas. Verifique sua conexão.</p>`;
       }
+    }
+
+    function renderCatalogResults(queryName) {
+      const q = queryName || lastCatalogSearchQuery || document.getElementById('catalogSearchInput').value.trim() || 'Pokémon';
+      const grid = document.getElementById('catalogGrid');
+      const countEl = document.getElementById('catalogResultsCount');
+
+      let combined = [];
+      if (activeOriginFilters.pt) combined.push(...rawCatalogResults.pt);
+      if (activeOriginFilters.en) combined.push(...rawCatalogResults.en);
+      if (activeOriginFilters.ja) combined.push(...rawCatalogResults.ja);
+
+      // Desduplicação inteligente por id + idioma
+      const seen = new Set();
+      const deduped = [];
+      for (const card of combined) {
+        const key = `${card.id}_${card.lang}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          deduped.push(card);
+        }
+      }
+
+      currentCatalogCards = deduped;
+
+      const totalFound = rawCatalogResults.pt.length + rawCatalogResults.en.length + rawCatalogResults.ja.length;
+
+      if (totalFound === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-16">
+            <p class="text-sm font-bold text-slate-300">Nenhuma carta encontrada para "${q}".</p>
+            <p class="text-xs text-slate-500 mt-1">Tente o nome em português, inglês ou japonês.</p>
+          </div>
+        `;
+        countEl.innerHTML = `<span>0 cartas encontradas para "${q}"</span>`;
+        return;
+      }
+
+      if (currentCatalogCards.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-16">
+            <p class="text-sm font-bold text-slate-300">As origens selecionadas estão desmarcadas.</p>
+            <p class="text-xs text-slate-500 mt-1">Marque pelo menos um país acima (🇧🇷 Brasil, 🇺🇸 EUA ou 🇯🇵 Japão) para visualizar.</p>
+          </div>
+        `;
+        countEl.innerHTML = `<span>Origens desmarcadas (${totalFound} cartas disponíveis no total)</span>`;
+        return;
+      }
+
+      countEl.innerHTML = `
+        <span class="font-bold text-white">${currentCatalogCards.length}</span>
+        <span>cartas mostradas de ${totalFound} encontradas</span>
+        <span class="text-slate-500 font-medium">(${rawCatalogResults.pt.length} 🇧🇷 BR · ${rawCatalogResults.en.length} 🇺🇸 EUA · ${rawCatalogResults.ja.length} 🇯🇵 JP)</span>
+      `;
+
+      let html = '';
+      currentCatalogCards.forEach((card, idx) => {
+        const imgUrl = card.image ? `${card.image}/high.webp` : CARD_BACK_FALLBACK;
+        const inInv = inventory.find(c => c.id === card.id && (c.lang || 'pt') === card.lang);
+        const qty = inInv ? inInv.quantity : 0;
+        const safeName = (card.name || 'Pokémon').replace(/'/g, "\\'");
+        const langBadge = getCardOriginBadge(card.lang);
+
+        html += `
+          <div class="bg-slate-950 rounded-2xl border border-slate-800 p-3 flex flex-col justify-between holo-card group transition-all">
+            <div onclick="openCardZoom('catalog', ${idx})" class="relative overflow-hidden rounded-xl bg-slate-900 aspect-[2.5/3.5] mb-2 flex items-center justify-center cursor-pointer group-hover:ring-2 group-hover:ring-poke-red/50 transition-all">
+              <img src="${imgUrl}" alt="${card.name}" class="w-full h-full object-contain pointer-events-none" loading="lazy"
+                   onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
+              
+              <!-- Badge com Bandeirinha de Origem (Topo Esquerdo) -->
+              <div class="absolute top-2 left-2 z-10 pointer-events-none">
+                ${langBadge}
+              </div>
+
+              ${qty > 0 ? `<span class="absolute top-2 right-2 bg-emerald-500 text-white font-black text-[10px] px-2 py-0.5 rounded-full shadow-md z-10">Tenho ${qty}x</span>` : ''}
+              
+              <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <span class="bg-slate-900/90 text-white font-bold text-[11px] px-2.5 py-1 rounded-full border border-slate-700 flex items-center gap-1 shadow-lg">
+                  <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-poke-red"></i>
+                  <span>Ver Carta</span>
+                </span>
+              </div>
+            </div>
+
+            <div onclick="openCardZoom('catalog', ${idx})" class="cursor-pointer">
+              <h4 class="text-xs font-black text-white truncate hover:text-poke-red transition-colors" title="${card.name}">${card.name}</h4>
+              <p class="text-[10px] text-slate-400">#${card.localId || 'N/A'}</p>
+            </div>
+
+            <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
+              <button onclick="addToInventory('${card.id}', '${safeName}', '${imgUrl}', '${card.localId || ''}', '${card.lang}')"
+                      class="flex-1 py-1.5 bg-poke-red hover:bg-rose-600 text-white font-bold text-[11px] rounded-lg transition-all flex items-center justify-center gap-1 shadow-sm">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Guardar</span>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      grid.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    function toggleOriginFilter(lang) {
+      activeOriginFilters[lang] = !activeOriginFilters[lang];
+      localStorage.setItem(STORAGE_KEY_ORIGINS, JSON.stringify(activeOriginFilters));
+      updateOriginFilterButtons();
+      renderCatalogResults();
+    }
+
+    function selectAllOrigins(enabled) {
+      activeOriginFilters = { pt: enabled, en: enabled, ja: enabled };
+      localStorage.setItem(STORAGE_KEY_ORIGINS, JSON.stringify(activeOriginFilters));
+      updateOriginFilterButtons();
+      renderCatalogResults();
+    }
+
+    function updateOriginFilterButtons() {
+      const cfg = {
+        pt: { btnId: 'originBtn-pt', activeClass: 'bg-emerald-950/70 text-emerald-300 border-emerald-500/60 shadow-sm ring-1 ring-emerald-500/40', dotColor: 'bg-emerald-400' },
+        en: { btnId: 'originBtn-en', activeClass: 'bg-blue-950/70 text-blue-300 border-blue-500/60 shadow-sm ring-1 ring-blue-500/40', dotColor: 'bg-blue-400' },
+        ja: { btnId: 'originBtn-ja', activeClass: 'bg-rose-950/70 text-rose-300 border-rose-500/60 shadow-sm ring-1 ring-rose-500/40', dotColor: 'bg-rose-400' }
+      };
+
+      const inactiveClass = 'bg-slate-900/60 text-slate-500 border-slate-800 opacity-60 hover:opacity-100';
+
+      ['pt', 'en', 'ja'].forEach(lang => {
+        const btn = document.getElementById(cfg[lang].btnId);
+        if (!btn) return;
+        const isActive = !!activeOriginFilters[lang];
+        const dot = btn.querySelector('.origin-dot');
+
+        if (isActive) {
+          btn.className = `px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border cursor-pointer ${cfg[lang].activeClass}`;
+          if (dot) dot.className = `origin-dot w-2 h-2 rounded-full ${cfg[lang].dotColor}`;
+        } else {
+          btn.className = `px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${inactiveClass}`;
+          if (dot) dot.className = `origin-dot w-2 h-2 rounded-full bg-slate-600`;
+        }
+      });
     }
 
     function quickSearch(pokemon) {
@@ -575,8 +840,9 @@
     // ==========================================
     // INVENTÁRIO DO MIGUEL E GAEL
     // ==========================================
-    function addToInventory(id, name, imgUrl, localId) {
-      const existing = inventory.find(c => c.id === id);
+    function addToInventory(id, name, imgUrl, localId, lang = 'pt') {
+      const cardLang = lang || 'pt';
+      const existing = inventory.find(c => c.id === id && (c.lang || 'pt') === cardLang);
       if (existing) {
         existing.quantity = (existing.quantity || 1) + 1;
       } else {
@@ -585,18 +851,43 @@
           name,
           image: imgUrl || CARD_BACK_FALLBACK,
           localId,
+          lang: cardLang,
           quantity: 1,
           forTrade: false,
           condition: 'Near Mint (Ótima)'
         });
       }
       saveInventory();
-      showToast(`+1 ${name} adicionado à pasta!`);
+      renderInventory();
+      const originCfg = ORIGIN_CONFIG[cardLang] || ORIGIN_CONFIG.pt;
+      showToast(`+1 ${name} (${originCfg.flag} ${originCfg.label}) adicionado à pasta!`);
+    }
+
+    function setInventoryOriginFilter(lang) {
+      currentInventoryOriginFilter = lang;
+      updateInventoryFilterButtons();
+      renderInventory();
+    }
+
+    function updateInventoryFilterButtons() {
+      const btns = ['all', 'pt', 'en', 'ja'];
+      btns.forEach(k => {
+        const btn = document.getElementById(`invOriginBtn-${k}`);
+        if (!btn) return;
+        if (currentInventoryOriginFilter === k) {
+          btn.className = 'px-3 py-1 rounded-xl text-xs font-black bg-emerald-500 text-slate-950 shadow-md transition-all cursor-pointer';
+        } else {
+          btn.className = 'px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all flex items-center gap-1 cursor-pointer';
+        }
+      });
     }
 
     function renderInventory() {
       const grid = document.getElementById('inventoryGrid');
+      const summaryEl = document.getElementById('invFilterSummary');
       if (!grid) return;
+
+      updateInventoryFilterButtons();
 
       if (inventory.length === 0) {
         grid.innerHTML = `
@@ -606,18 +897,55 @@
             <p class="text-xs text-slate-500 mt-1">Vá na aba "Buscar Cartas" ou use o "Scanner com IA" para cadastrar as primeiras.</p>
           </div>
         `;
+        if (summaryEl) summaryEl.innerText = '';
+        lucide.createIcons();
+        return;
+      }
+
+      let filtered = inventory;
+      if (currentInventoryOriginFilter !== 'all') {
+        filtered = inventory.filter(c => (c.lang || 'pt') === currentInventoryOriginFilter);
+      }
+
+      const counts = {
+        pt: inventory.filter(c => (c.lang || 'pt') === 'pt').reduce((acc, c) => acc + (c.quantity || 1), 0),
+        en: inventory.filter(c => (c.lang || 'pt') === 'en').reduce((acc, c) => acc + (c.quantity || 1), 0),
+        ja: inventory.filter(c => (c.lang || 'pt') === 'ja').reduce((acc, c) => acc + (c.quantity || 1), 0),
+      };
+
+      if (summaryEl) {
+        summaryEl.innerHTML = `<span class="text-emerald-400 font-bold">${filtered.length} cartas</span> (🇧🇷 ${counts.pt} · 🇺🇸 ${counts.en} · 🇯🇵 ${counts.ja})`;
+      }
+
+      if (filtered.length === 0) {
+        const originCfg = ORIGIN_CONFIG[currentInventoryOriginFilter] || {};
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-12 text-slate-400">
+            <p class="text-sm font-bold text-slate-300">Nenhuma carta da origem ${originCfg.flag || ''} ${originCfg.label || ''} na pasta.</p>
+            <p class="text-xs text-slate-500 mt-1">Alterne o filtro ou busque novas cartas no catálogo!</p>
+          </div>
+        `;
         lucide.createIcons();
         return;
       }
 
       let html = '';
-      inventory.forEach((card, idx) => {
+      filtered.forEach((card) => {
+        const realIdx = inventory.indexOf(card);
+        const langBadge = getCardOriginBadge(card.lang || 'pt');
+
         html += `
           <div class="bg-slate-950 rounded-2xl border ${card.forTrade ? 'border-amber-500/80 bg-amber-950/20' : 'border-slate-800'} p-3 flex flex-col justify-between holo-card group">
             <div>
-              <div onclick="openCardZoom('inventory', ${idx})" class="relative overflow-hidden rounded-xl bg-slate-900 aspect-[2.5/3.5] mb-2 flex items-center justify-center cursor-pointer group-hover:ring-2 group-hover:ring-amber-400/50 transition-all">
+              <div onclick="openCardZoom('inventory', ${realIdx})" class="relative overflow-hidden rounded-xl bg-slate-900 aspect-[2.5/3.5] mb-2 flex items-center justify-center cursor-pointer group-hover:ring-2 group-hover:ring-amber-400/50 transition-all">
                 <img src="${card.image}" class="w-full h-full object-contain pointer-events-none" loading="lazy"
                      onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
+                
+                <!-- Badge com Bandeirinha de Origem (Topo Esquerdo) -->
+                <div class="absolute top-2 left-2 z-10 pointer-events-none">
+                  ${langBadge}
+                </div>
+
                 <span class="absolute top-2 right-2 bg-poke-red text-white font-black text-[10px] px-2 py-0.5 rounded-full shadow-md z-10">${card.quantity}x</span>
                 ${card.forTrade ? '<span class="absolute bottom-2 left-2 bg-amber-500 text-slate-950 font-black text-[9px] px-1.5 py-0.5 rounded-md shadow-md z-10">NA MESA</span>' : ''}
                 <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -628,23 +956,23 @@
                 </div>
               </div>
 
-              <div onclick="openCardZoom('inventory', ${idx})" class="cursor-pointer">
-                <h4 class="text-xs font-black text-white truncate hover:text-amber-400 transition-colors">${card.name}</h4>
+              <div onclick="openCardZoom('inventory', ${realIdx})" class="cursor-pointer">
+                <h4 class="text-xs font-black text-white truncate hover:text-amber-400 transition-colors" title="${card.name}">${card.name}</h4>
                 <p class="text-[10px] text-slate-400">Condição: <span class="text-slate-200 font-bold">${card.condition}</span></p>
               </div>
             </div>
 
             <div class="mt-3 pt-2 border-t border-slate-800 space-y-1.5">
-              <button onclick="toggleTradeStatus(${idx})" class="w-full py-1.5 ${card.forTrade ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:text-white'} font-bold text-[10px] rounded-lg transition flex items-center justify-center gap-1">
+              <button onclick="toggleTradeStatus(${realIdx})" class="w-full py-1.5 ${card.forTrade ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:text-white'} font-bold text-[10px] rounded-lg transition flex items-center justify-center gap-1">
                 <i data-lucide="repeat" class="w-3 h-3"></i>
                 <span>${card.forTrade ? 'Na Mesa de Trocas' : 'Liberar p/ Troca'}</span>
               </button>
 
               <div class="flex items-center justify-between text-xs pt-1">
-                <button onclick="adjustQty(${idx}, -1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center">-</button>
+                <button onclick="adjustQty(${realIdx}, -1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center">-</button>
                 <span class="font-bold text-xs">${card.quantity} un</span>
-                <button onclick="adjustQty(${idx}, 1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center">+</button>
-                <button onclick="removeCard(${idx})" class="p-1 text-slate-500 hover:text-rose-400" title="Remover"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                <button onclick="adjustQty(${realIdx}, 1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center">+</button>
+                <button onclick="removeCard(${realIdx})" class="p-1 text-slate-500 hover:text-rose-400" title="Remover"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
               </div>
             </div>
           </div>
@@ -1015,17 +1343,24 @@
     async function fetchTcgdexCards(name) {
       if (!name) return [];
       try {
-        let res = await fetch(`https://api.tcgdex.net/v2/pt/cards?name=${encodeURIComponent(name)}`);
-        if (res.ok) {
-          let data = await res.json();
-          if (Array.isArray(data) && data.length > 0) return data;
-        }
-        // Fallback para catálogo em inglês
-        res = await fetch(`https://api.tcgdex.net/v2/en/cards?name=${encodeURIComponent(name)}`);
-        if (res.ok) {
-          let data = await res.json();
-          if (Array.isArray(data) && data.length > 0) return data;
-        }
+        const jaName = await getJapanesePokemonName(name);
+        const [pt, en, ja] = await Promise.all([
+          fetch(`https://api.tcgdex.net/v2/pt/cards?name=${encodeURIComponent(name)}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(arr => (Array.isArray(arr) ? arr : []).map(c => ({ ...c, lang: 'pt' })))
+            .catch(() => []),
+          fetch(`https://api.tcgdex.net/v2/en/cards?name=${encodeURIComponent(name)}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(arr => (Array.isArray(arr) ? arr : []).map(c => ({ ...c, lang: 'en' })))
+            .catch(() => []),
+          fetch(`https://api.tcgdex.net/v2/ja/cards?name=${encodeURIComponent(jaName || name)}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(arr => (Array.isArray(arr) ? arr : []).map(c => ({ ...c, lang: 'ja' })))
+            .catch(() => [])
+        ]);
+
+        const combined = [...pt, ...en, ...ja];
+        if (combined.length > 0) return combined;
       } catch (err) {
         console.warn('Erro ao consultar TCGdex:', err);
       }
@@ -1212,13 +1547,16 @@
               <span class="text-amber-400 font-bold">#${state.selectedCardIndex + 1} de ${state.cards.length}</span>
             </div>
             <div class="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-              ${state.cards.slice(0, 10).map((c, idx) => `
+              ${state.cards.slice(0, 12).map((c, idx) => `
                 <button onclick="selectScannedCardEdition(${idx})" 
-                        class="shrink-0 p-1 rounded-xl border-2 transition-all ${idx === state.selectedCardIndex ? 'border-amber-400 bg-amber-500/10' : 'border-slate-800 hover:border-slate-600 bg-slate-950'}">
+                        class="shrink-0 p-1 rounded-xl border-2 transition-all cursor-pointer ${idx === state.selectedCardIndex ? 'border-amber-400 bg-amber-500/10 ring-1 ring-amber-400/50' : 'border-slate-800 hover:border-slate-600 bg-slate-950'}">
                   <img src="${c.image ? c.image + '/low.webp' : CARD_BACK_FALLBACK}" 
                        class="w-12 h-16 object-contain rounded-lg pointer-events-none"
                        onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
-                  <p class="text-[9px] font-bold text-slate-300 mt-1 truncate max-w-12 text-center">#${c.localId || idx+1}</p>
+                  <div class="flex items-center justify-between text-[9px] mt-1 px-0.5">
+                    <span class="font-bold text-slate-300 truncate max-w-7">#${c.localId || idx+1}</span>
+                    <span class="text-[10px]">${(ORIGIN_CONFIG[c.lang] || ORIGIN_CONFIG.pt).flag}</span>
+                  </div>
                 </button>
               `).join('')}
             </div>
@@ -1380,10 +1718,11 @@
       const imgUrl = selectedCard && selectedCard.image ? `${selectedCard.image}/high.webp` : state.userImg;
       const localId = selectedCard ? (selectedCard.localId || '') : '';
       const id = selectedCard ? selectedCard.id : `scan_${Date.now()}`;
+      const cardLang = selectedCard ? (selectedCard.lang || 'pt') : 'pt';
       const condition = document.getElementById('scanCardCondition')?.value || 'Near Mint (Ótima)';
       const forTrade = document.getElementById('scanCardForTrade')?.checked || false;
 
-      const existing = inventory.find(c => c.id === id);
+      const existing = inventory.find(c => c.id === id && (c.lang || 'pt') === cardLang);
       if (existing) {
         existing.quantity = (existing.quantity || 1) + 1;
         existing.condition = condition;
@@ -1394,6 +1733,7 @@
           name,
           image: imgUrl,
           localId,
+          lang: cardLang,
           quantity: 1,
           forTrade,
           condition
@@ -1401,7 +1741,9 @@
       }
 
       saveInventory();
-      showToast(`🎉 ${name} guardado com sucesso no Inventário!`);
+      renderInventory();
+      const originCfg = ORIGIN_CONFIG[cardLang] || ORIGIN_CONFIG.pt;
+      showToast(`🎉 ${name} (${originCfg.flag} ${originCfg.label}) guardado com sucesso no Inventário!`);
       
       // Oculta resultado do scanner e redireciona para o inventário
       document.getElementById('scanResultContainer').classList.add('hidden');
@@ -1418,6 +1760,8 @@
       const idEl = document.getElementById('zoomCardId');
       const rarityEl = document.getElementById('zoomCardRarity');
       const badgeEl = document.getElementById('zoomCardBadge');
+      const originBadgeEl = document.getElementById('zoomCardOriginBadge');
+      const originPillEl = document.getElementById('zoomCardOriginPill');
       const actionsEl = document.getElementById('zoomCardActions');
       const priceBRLEl = document.getElementById('zoomCardPriceBRL');
       const priceUSDEl = document.getElementById('zoomCardPriceUSD');
@@ -1430,12 +1774,15 @@
         card = currentCatalogCards[index];
         if (!card) return;
         isFromCatalog = true;
-        inInv = inventory.find(c => c.id === card.id);
+        inInv = inventory.find(c => c.id === card.id && (c.lang || 'pt') === (card.lang || 'pt'));
       } else if (source === 'inventory') {
         card = inventory[index];
         if (!card) return;
         inInv = card;
       }
+
+      const cardLang = card.lang || 'pt';
+      const originCfg = ORIGIN_CONFIG[cardLang] || ORIGIN_CONFIG.pt;
 
       const imgUrl = card.image ? (card.image.includes('http') && !card.image.includes('/high.webp') && !card.image.includes('placeholder') && !card.image.includes('data:image') ? `${card.image}/high.webp` : card.image) : CARD_BACK_FALLBACK;
       const safeName = (card.name || 'Pokémon').replace(/'/g, "\\'");
@@ -1445,6 +1792,20 @@
       nameEl.innerText = card.name || 'Pokémon';
       idEl.innerText = card.localId ? `Número: #${card.localId}` : `ID: ${card.id}`;
       rarityEl.innerText = card.rarity || 'Coleção Oficial';
+
+      // Badge de Origem com Bandeira no Modal
+      if (originBadgeEl) {
+        originBadgeEl.innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border ${originCfg.color} shadow-lg backdrop-blur-md">
+          <span class="text-sm">${originCfg.flag}</span>
+          <span>Edição ${originCfg.label} (${originCfg.short})</span>
+        </span>`;
+        originBadgeEl.classList.remove('hidden');
+      }
+
+      if (originPillEl) {
+        originPillEl.className = `text-[10px] font-black px-2 py-0.5 rounded-md border flex items-center gap-1 ${originCfg.color}`;
+        originPillEl.innerHTML = `<span>${originCfg.flag}</span><span>${originCfg.label}</span>`;
+      }
 
       // Precificação inicial enquanto busca a API
       priceBRLEl.innerText = 'Calculando...';
@@ -1459,8 +1820,8 @@
 
       if (isFromCatalog) {
         actionsEl.innerHTML = `
-          <button onclick="addToInventory('${card.id}', '${safeName}', '${imgUrl}', '${card.localId || ''}'); openCardZoom('catalog', ${index});"
-                  class="px-5 py-2.5 bg-poke-red hover:bg-rose-600 text-white font-black text-xs rounded-xl transition-all shadow-lg flex items-center gap-2">
+          <button onclick="addToInventory('${card.id}', '${safeName}', '${imgUrl}', '${card.localId || ''}', '${cardLang}'); openCardZoom('catalog', ${index});"
+                  class="px-5 py-2.5 bg-poke-red hover:bg-rose-600 text-white font-black text-xs rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer">
             <i data-lucide="plus" class="w-4 h-4"></i>
             <span>+1 Guardar</span>
           </button>
@@ -1468,7 +1829,7 @@
       } else {
         actionsEl.innerHTML = `
           <button onclick="toggleTradeStatus(${index}); openCardZoom('inventory', ${index});"
-                  class="px-4 py-2.5 ${card.forTrade ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-200 hover:text-white'} font-black text-xs rounded-xl transition-all flex items-center gap-2">
+                  class="px-4 py-2.5 ${card.forTrade ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-200 hover:text-white'} font-black text-xs rounded-xl transition-all flex items-center gap-2 cursor-pointer">
             <i data-lucide="repeat" class="w-4 h-4"></i>
             <span>${card.forTrade ? 'Na Mesa de Trocas' : 'Colocar p/ Troca'}</span>
           </button>
@@ -1480,7 +1841,11 @@
 
       // Busca cotação detalhada de preço via TCGdex / CardMarket
       try {
-        const resp = await fetch(`https://api.tcgdex.net/v2/pt/cards/${card.id}`);
+        const queryLang = cardLang === 'ja' ? 'ja' : (cardLang === 'en' ? 'en' : 'pt');
+        let resp = await fetch(`https://api.tcgdex.net/v2/${queryLang}/cards/${card.id}`);
+        if (!resp.ok && queryLang !== 'en') {
+          resp = await fetch(`https://api.tcgdex.net/v2/en/cards/${card.id}`);
+        }
         if (resp.ok) {
           const detail = await resp.json();
           if (detail.rarity) rarityEl.innerText = detail.rarity;
