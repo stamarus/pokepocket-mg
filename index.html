@@ -570,6 +570,186 @@
       </span>`;
     }
 
+    // ==========================================
+    // SISTEMA MULTI-FONTE DE IMAGENS POKÉMON
+    // (TCGdex, PokemonTCG.io, Pokemon.com, PokemonDB & PokéAPI)
+    // ==========================================
+
+    // Extrai o nome base (slug) do Pokémon para buscar artes oficiais
+    function extractPokemonSlug(name, ptName) {
+      const src = ptName || name || '';
+      if (!src) return '';
+      let s = src.toLowerCase().trim();
+      s = s.replace(/^(mega\s+|m\s+)/, '');
+      if (s.includes(' e ')) s = s.split(' e ')[0];
+      if (s.includes(' & ')) s = s.split(' & ')[0];
+      s = s.replace(/\s+(gx|vmax|vstar|ex|v|radiante|shiny|turbo|lv\.x|prime|tera|prism star|break|delta species|sp|fb|gl).*$/, '');
+      s = s.replace(/\s+(com|de|do|da|no|na)\s+.*$/, '');
+      s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      s = s.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      // Se tiver mais de uma palavra composta, usa o primeiro termo como base do Pokémon
+      if (s.includes('-')) {
+        const first = s.split('-')[0];
+        if (first.length >= 3) s = first;
+      }
+      return s;
+    }
+
+    // Gera lista ordenada de URLs candidatas em múltiplas fontes confiáveis
+    function getCardImageCandidates(card) {
+      if (!card) return [CARD_BACK_FALLBACK];
+      const candidates = [];
+      const set = new Set();
+
+      function add(url) {
+        if (url && typeof url === 'string' && url.length > 5 && !set.has(url)) {
+          set.add(url);
+          candidates.push(url);
+        }
+      }
+
+      // 1. Imagem nativa do TCGdex (se fornecida e válida)
+      if (card.image && card.image !== CARD_BACK_FALLBACK) {
+        if (card.image.includes('http') && !card.image.includes('/high.webp') && !card.image.includes('data:image') && !card.image.includes('.png') && !card.image.includes('.jpg')) {
+          add(`${card.image}/high.webp`);
+          add(`${card.image}/low.webp`);
+        } else {
+          add(card.image);
+        }
+      }
+
+      // Parâmetros de identificação da carta
+      const idStr = String(card.id || '').trim();
+      const localId = String(card.localId || '').trim();
+      const setPart = idStr.includes('-') ? idStr.split('-')[0].toLowerCase() : '';
+      const numUnpadded = localId ? (localId.replace(/^0+/, '') || '0') : '';
+
+      if (setPart && localId) {
+        const setNorm = setPart.replace('.5', 'pt5').replace('.', '');
+        const setUpper = setPart.toUpperCase();
+
+        // 2. PokemonTCG.io CDN (CDN mundial com acervo completo de cartas reais)
+        add(`https://images.pokemontcg.io/${setPart}/${localId}_hires.png`);
+        add(`https://images.pokemontcg.io/${setPart}/${localId}.png`);
+        if (numUnpadded !== localId) {
+          add(`https://images.pokemontcg.io/${setPart}/${numUnpadded}_hires.png`);
+          add(`https://images.pokemontcg.io/${setPart}/${numUnpadded}.png`);
+        }
+        if (setNorm !== setPart) {
+          add(`https://images.pokemontcg.io/${setNorm}/${localId}_hires.png`);
+          add(`https://images.pokemontcg.io/${setNorm}/${localId}.png`);
+          if (numUnpadded !== localId) {
+            add(`https://images.pokemontcg.io/${setNorm}/${numUnpadded}.png`);
+          }
+        }
+
+        // 3. Pokemon.com Official Web CDN
+        add(`https://assets.pokemon.com/assets/cms2/img/cards/web/${setUpper}/${setUpper}_EN_${numUnpadded}.png`);
+        add(`https://assets.pokemon.com/assets/cms2/img/cards/web/${setUpper}/${setUpper}_EN_${localId}.png`);
+
+        // 4. TCGdex Espelhos Internacionais (assets.tcgdex.net/en, /ja e /pt)
+        add(`https://assets.tcgdex.net/en/${setPart}/${localId}/high.webp`);
+        add(`https://assets.tcgdex.net/en/${setPart}/${numUnpadded}/high.webp`);
+        add(`https://assets.tcgdex.net/ja/${setPart}/${localId}/high.webp`);
+        add(`https://assets.tcgdex.net/pt/${setPart}/${localId}/high.webp`);
+      }
+
+      // 5. Cruzamento com o catálogo carregado em memória (ex: edição EN da mesma carta com foto)
+      if (typeof rawCatalogResults !== 'undefined' && rawCatalogResults) {
+        const allKnown = [...(rawCatalogResults.en || []), ...(rawCatalogResults.pt || []), ...(rawCatalogResults.ja || [])];
+        const match = allKnown.find(c => c && c.image && (c.id === card.id || (c.localId === card.localId && (c.name === card.name || c.id?.split('-')[0] === card.id?.split('-')[0]))));
+        if (match && match.image) {
+          const matchUrl = (match.image.includes('http') && !match.image.includes('/high.webp')) ? `${match.image}/high.webp` : match.image;
+          add(matchUrl);
+        }
+      }
+
+      // 6. PokemonDB & PokéAPI Artwork Oficial Sugimori (garante que NENHUMA carta fique sem arte)
+      const slug = extractPokemonSlug(card.name, card.ptName);
+      if (slug) {
+        add(`https://img.pokemondb.net/artwork/large/${slug}.jpg`);
+        add(`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${slug}.png`);
+      }
+
+      // 7. Fallback visual oficial de carta Pokémon
+      add(CARD_BACK_FALLBACK);
+
+      return candidates;
+    }
+
+    // Retorna atributos prontos para tag <img> com motor de fallback
+    function getCardImageAttrs(card) {
+      const candidates = getCardImageCandidates(card);
+      const primary = candidates[0] || CARD_BACK_FALLBACK;
+      const fallbacks = candidates.slice(1);
+      const safeFallbacks = JSON.stringify(fallbacks).replace(/"/g, '&quot;');
+      const isArtwork = primary.includes('pokemondb.net') || primary.includes('PokeAPI');
+
+      return {
+        src: primary,
+        fallbacksAttr: `data-fallbacks="${safeFallbacks}" data-fallback-idx="0" data-card-id="${card?.id || ''}" data-card-lang="${card?.lang || 'pt'}"`,
+        isArtwork
+      };
+    }
+
+    // Manipulador de erro: tenta sucessivamente as outras fontes da cadeia
+    function handleCardImgFallback(imgEl) {
+      if (!imgEl) return;
+      const raw = imgEl.getAttribute('data-fallbacks');
+      if (!raw) {
+        imgEl.onerror = null;
+        imgEl.src = CARD_BACK_FALLBACK;
+        return;
+      }
+      try {
+        const fallbacks = JSON.parse(raw.replace(/&quot;/g, '"'));
+        let idx = parseInt(imgEl.getAttribute('data-fallback-idx') || '0', 10);
+        if (idx < fallbacks.length) {
+          const next = fallbacks[idx];
+          imgEl.setAttribute('data-fallback-idx', idx + 1);
+          imgEl.src = next;
+        } else {
+          imgEl.onerror = null;
+          imgEl.src = CARD_BACK_FALLBACK;
+        }
+      } catch (e) {
+        imgEl.onerror = null;
+        imgEl.src = CARD_BACK_FALLBACK;
+      }
+    }
+
+    // Quando uma imagem carrega com sucesso, se for uma foto real, atualiza o inventário
+    function handleCardImgLoaded(imgEl) {
+      if (!imgEl || !imgEl.src || imgEl.src.includes('data:image/svg')) return;
+      const cardId = imgEl.getAttribute('data-card-id');
+      const cardLang = imgEl.getAttribute('data-card-lang') || 'pt';
+      if (!cardId) return;
+
+      const inInv = inventory.find(c => c.id === cardId && (c.lang || 'pt') === cardLang);
+      if (inInv && (!inInv.image || inInv.image === CARD_BACK_FALLBACK || inInv.image.includes('placeholder'))) {
+        inInv.image = imgEl.src;
+        saveInventory();
+      }
+    }
+
+    // Migração de inventário: restaura imagens de cartas já salvas que estavam sem foto
+    function migrateInventoryImages() {
+      let changed = false;
+      inventory.forEach(c => {
+        if (!c.image || c.image === CARD_BACK_FALLBACK || c.image.includes('placeholder')) {
+          const attrs = getCardImageAttrs(c);
+          if (attrs.src && attrs.src !== CARD_BACK_FALLBACK) {
+            c.image = attrs.src;
+            changed = true;
+          }
+        }
+      });
+      if (changed) {
+        saveInventory();
+        console.log('PokePocketMG: Imagens do inventário atualizadas para fontes de alta resolução.');
+      }
+    }
+
     // Cache de cartas buscadas
     let currentCatalogCards = [];
     let rawCatalogResults = { pt: [], en: [], ja: [] };
@@ -746,7 +926,7 @@
 
       let html = '';
       currentCatalogCards.forEach((card, idx) => {
-        const imgUrl = card.image ? `${card.image}/high.webp` : CARD_BACK_FALLBACK;
+        const imgAttrs = getCardImageAttrs(card);
         const inInv = inventory.find(c => c.id === card.id && (c.lang || 'pt') === card.lang);
         const qty = inInv ? inInv.quantity : 0;
         const safeName = (card.name || 'Pokémon').replace(/'/g, "\\'");
@@ -755,8 +935,8 @@
         html += `
           <div class="bg-slate-950 rounded-2xl border border-slate-800 p-3 flex flex-col justify-between holo-card group transition-all">
             <div onclick="openCardZoom('catalog', ${idx})" class="relative overflow-hidden rounded-xl bg-slate-900 aspect-[2.5/3.5] mb-2 flex items-center justify-center cursor-pointer group-hover:ring-2 group-hover:ring-poke-red/50 transition-all">
-              <img src="${imgUrl}" alt="${card.name}" class="w-full h-full object-contain pointer-events-none" loading="lazy"
-                   onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
+              <img src="${imgAttrs.src}" ${imgAttrs.fallbacksAttr} alt="${card.name}" class="w-full h-full object-contain pointer-events-none" loading="lazy"
+                   onerror="handleCardImgFallback(this)" onload="handleCardImgLoaded(this)">
               
               <!-- Badge com Bandeirinha de Origem (Topo Esquerdo) -->
               <div class="absolute top-2 left-2 z-10 pointer-events-none">
@@ -779,7 +959,7 @@
             </div>
 
             <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
-              <button onclick="addToInventory('${card.id}', '${safeName}', '${imgUrl}', '${card.localId || ''}', '${card.lang}')"
+              <button onclick="addToInventory('${card.id}', '${safeName}', '${imgAttrs.src}', '${card.localId || ''}', '${card.lang}')"
                       class="flex-1 py-1.5 bg-poke-red hover:bg-rose-600 text-white font-bold text-[11px] rounded-lg transition-all flex items-center justify-center gap-1 shadow-sm">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 <span>Guardar</span>
@@ -842,14 +1022,23 @@
     // ==========================================
     function addToInventory(id, name, imgUrl, localId, lang = 'pt') {
       const cardLang = lang || 'pt';
+      let resolvedImg = imgUrl;
+      if (!resolvedImg || resolvedImg === CARD_BACK_FALLBACK || resolvedImg.includes('data:image/svg')) {
+        const bestAttrs = getCardImageAttrs({ id, name, localId, lang: cardLang });
+        resolvedImg = bestAttrs.src || CARD_BACK_FALLBACK;
+      }
+
       const existing = inventory.find(c => c.id === id && (c.lang || 'pt') === cardLang);
       if (existing) {
         existing.quantity = (existing.quantity || 1) + 1;
+        if (!existing.image || existing.image === CARD_BACK_FALLBACK) {
+          existing.image = resolvedImg;
+        }
       } else {
         inventory.push({
           id,
           name,
-          image: imgUrl || CARD_BACK_FALLBACK,
+          image: resolvedImg,
           localId,
           lang: cardLang,
           quantity: 1,
@@ -933,13 +1122,14 @@
       filtered.forEach((card) => {
         const realIdx = inventory.indexOf(card);
         const langBadge = getCardOriginBadge(card.lang || 'pt');
+        const imgAttrs = getCardImageAttrs(card);
 
         html += `
           <div class="bg-slate-950 rounded-2xl border ${card.forTrade ? 'border-amber-500/80 bg-amber-950/20' : 'border-slate-800'} p-3 flex flex-col justify-between holo-card group">
             <div>
               <div onclick="openCardZoom('inventory', ${realIdx})" class="relative overflow-hidden rounded-xl bg-slate-900 aspect-[2.5/3.5] mb-2 flex items-center justify-center cursor-pointer group-hover:ring-2 group-hover:ring-amber-400/50 transition-all">
-                <img src="${card.image}" class="w-full h-full object-contain pointer-events-none" loading="lazy"
-                     onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
+                <img src="${imgAttrs.src}" ${imgAttrs.fallbacksAttr} class="w-full h-full object-contain pointer-events-none" loading="lazy"
+                     onerror="handleCardImgFallback(this)" onload="handleCardImgLoaded(this)">
                 
                 <!-- Badge com Bandeirinha de Origem (Topo Esquerdo) -->
                 <div class="absolute top-2 left-2 z-10 pointer-events-none">
@@ -1020,10 +1210,11 @@
       } else {
         let html = '';
         tradeable.forEach(c => {
+          const cAttrs = getCardImageAttrs(c);
           html += `
             <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 text-xs">
               <div class="flex items-center gap-2">
-                <img src="${c.image}" class="w-8 h-10 object-contain rounded">
+                <img src="${cAttrs.src}" ${cAttrs.fallbacksAttr} class="w-8 h-10 object-contain rounded" onerror="handleCardImgFallback(this)" onload="handleCardImgLoaded(this)">
                 <div>
                   <p class="font-bold text-white">${c.name}</p>
                   <p class="text-[10px] text-slate-400">Repetidas: ${c.quantity}x • ${c.condition}</p>
@@ -1515,10 +1706,7 @@
       const state = activeScanState;
       const selectedCard = (state.cards && state.cards.length > 0) ? state.cards[state.selectedCardIndex] : null;
 
-      const officialImg = selectedCard && selectedCard.image 
-        ? `${selectedCard.image}/high.webp` 
-        : (selectedCard ? CARD_BACK_FALLBACK : state.userImg);
-
+      const offAttrs = selectedCard ? getCardImageAttrs(selectedCard) : { src: state.userImg, fallbacksAttr: '' };
       const cardName = selectedCard ? selectedCard.name : (state.detectedName || 'Pokémon Desconhecido');
       const cardLocalId = selectedCard ? (selectedCard.localId || '') : '';
       const cardId = selectedCard ? selectedCard.id : `scan_custom_${Date.now()}`;
@@ -1547,18 +1735,20 @@
               <span class="text-amber-400 font-bold">#${state.selectedCardIndex + 1} de ${state.cards.length}</span>
             </div>
             <div class="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-              ${state.cards.slice(0, 12).map((c, idx) => `
+              ${state.cards.slice(0, 12).map((c, idx) => {
+                const cAttrs = getCardImageAttrs(c);
+                return `
                 <button onclick="selectScannedCardEdition(${idx})" 
                         class="shrink-0 p-1 rounded-xl border-2 transition-all cursor-pointer ${idx === state.selectedCardIndex ? 'border-amber-400 bg-amber-500/10 ring-1 ring-amber-400/50' : 'border-slate-800 hover:border-slate-600 bg-slate-950'}">
-                  <img src="${c.image ? c.image + '/low.webp' : CARD_BACK_FALLBACK}" 
+                  <img src="${cAttrs.src}" ${cAttrs.fallbacksAttr} 
                        class="w-12 h-16 object-contain rounded-lg pointer-events-none"
-                       onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
+                       onerror="handleCardImgFallback(this)">
                   <div class="flex items-center justify-between text-[9px] mt-1 px-0.5">
                     <span class="font-bold text-slate-300 truncate max-w-7">#${c.localId || idx+1}</span>
                     <span class="text-[10px]">${(ORIGIN_CONFIG[c.lang] || ORIGIN_CONFIG.pt).flag}</span>
                   </div>
                 </button>
-              `).join('')}
+              `;}).join('')}
             </div>
           </div>
         `;
@@ -1599,8 +1789,8 @@
 
             <!-- Correspondência Oficial -->
             <div class="flex items-center gap-3 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-              <img src="${officialImg}" class="w-16 h-22 object-contain rounded-lg border border-emerald-500/40 bg-black"
-                   onerror="this.onerror=null; this.src='${CARD_BACK_FALLBACK}';">
+              <img src="${offAttrs.src}" ${offAttrs.fallbacksAttr} class="w-16 h-22 object-contain rounded-lg border border-emerald-500/40 bg-black"
+                   onerror="handleCardImgFallback(this)">
               <div>
                 <span class="text-[9px] font-black uppercase text-emerald-400 tracking-wider">Match no Catálogo</span>
                 <p class="text-xs font-black text-white truncate max-w-[130px]">${cardName}</p>
@@ -1715,7 +1905,7 @@
       const selectedCard = (state.cards && state.cards.length > 0) ? state.cards[state.selectedCardIndex] : null;
       
       const name = selectedCard ? selectedCard.name : (state.detectedName || 'Pokémon');
-      const imgUrl = selectedCard && selectedCard.image ? `${selectedCard.image}/high.webp` : state.userImg;
+      const imgUrl = selectedCard ? (getCardImageAttrs(selectedCard).src || state.userImg) : state.userImg;
       const localId = selectedCard ? (selectedCard.localId || '') : '';
       const id = selectedCard ? selectedCard.id : `scan_${Date.now()}`;
       const cardLang = selectedCard ? (selectedCard.lang || 'pt') : 'pt';
@@ -1784,11 +1974,17 @@
       const cardLang = card.lang || 'pt';
       const originCfg = ORIGIN_CONFIG[cardLang] || ORIGIN_CONFIG.pt;
 
-      const imgUrl = card.image ? (card.image.includes('http') && !card.image.includes('/high.webp') && !card.image.includes('placeholder') && !card.image.includes('data:image') ? `${card.image}/high.webp` : card.image) : CARD_BACK_FALLBACK;
+      const imgAttrs = getCardImageAttrs(card);
       const safeName = (card.name || 'Pokémon').replace(/'/g, "\\'");
 
-      imgEl.src = imgUrl;
-      imgEl.onerror = () => { imgEl.onerror = null; imgEl.src = CARD_BACK_FALLBACK; };
+      imgEl.src = imgAttrs.src;
+      imgEl.setAttribute('data-fallbacks', JSON.stringify(getCardImageCandidates(card).slice(1)));
+      imgEl.setAttribute('data-fallback-idx', '0');
+      imgEl.setAttribute('data-card-id', card.id || '');
+      imgEl.setAttribute('data-card-lang', cardLang);
+      imgEl.onerror = () => handleCardImgFallback(imgEl);
+      imgEl.onload = () => handleCardImgLoaded(imgEl);
+
       nameEl.innerText = card.name || 'Pokémon';
       idEl.innerText = card.localId ? `Número: #${card.localId}` : `ID: ${card.id}`;
       rarityEl.innerText = card.rarity || 'Coleção Oficial';
@@ -1820,7 +2016,7 @@
 
       if (isFromCatalog) {
         actionsEl.innerHTML = `
-          <button onclick="addToInventory('${card.id}', '${safeName}', '${imgUrl}', '${card.localId || ''}', '${cardLang}'); openCardZoom('catalog', ${index});"
+          <button onclick="addToInventory('${card.id}', '${safeName}', '${imgAttrs.src}', '${card.localId || ''}', '${cardLang}'); openCardZoom('catalog', ${index});"
                   class="px-5 py-2.5 bg-poke-red hover:bg-rose-600 text-white font-black text-xs rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer">
             <i data-lucide="plus" class="w-4 h-4"></i>
             <span>+1 Guardar</span>
@@ -1917,6 +2113,7 @@
 
     // Inicialização
     window.addEventListener('DOMContentLoaded', () => {
+      migrateInventoryImages();
       updateBadges();
       searchCards('Pikachu');
       lucide.createIcons();
